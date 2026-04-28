@@ -1,24 +1,18 @@
-//
-//  ContentView.swift
-//  ColisApp
-//
-//  Created by Nadjib Bellouni on 26/04/2026.
-//
-
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
 
-#Preview {
-    ContentView()
+    @Environment(\.factory) private var factory
+    @Environment(AuthState.self) private var authState
+
+    var body: some View {
+        Group {
+            if authState.isLoggedIn {
+                MainTabView()
+            } else {
+                LoginView()
+            }
+        }
+        .preferredColorScheme(.light)
+    }
 }

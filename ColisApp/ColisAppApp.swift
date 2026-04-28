@@ -1,17 +1,15 @@
-//
-//  ColisAppApp.swift
-//  ColisApp
-//
-//  Created by Nadjib Bellouni on 26/04/2026.
-//
-
 import SwiftUI
 
 @main
 struct ColisAppApp: App {
+
+    @State private var authState = AuthState()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(\.factory, ProductionAppFactory())
+                .environment(authState)
         }
     }
 }

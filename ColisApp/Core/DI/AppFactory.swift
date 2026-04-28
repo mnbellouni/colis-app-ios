@@ -1,0 +1,96 @@
+import SwiftUI
+
+protocol AppFactory {
+    func makeLoginViewModel()           -> LoginViewModel
+    func makeRegisterViewModel()        -> RegisterViewModel
+    func makeHomeViewModel()            -> HomeViewModel
+    func makeAnnonceDetailViewModel()   -> AnnonceDetailViewModel
+    func makeCreateAnnonceViewModel()   -> CreateAnnonceViewModel
+    func makeConversationsViewModel()   -> ConversationsViewModel
+    func makeChatViewModel()            -> ChatViewModel
+    func makeProfileViewModel()         -> ProfileViewModel
+    func makeLivraisonViewModel()       -> LivraisonViewModel
+}
+
+final class ProductionAppFactory: AppFactory {
+
+    private let keychainStorage  = KeychainStorage()
+    private lazy var apiClient = APIClient(keychainStorage: keychainStorage)
+
+    private func makeAuthRepository() -> any AuthRepository {
+        AuthRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
+    }
+
+    private func makeAnnonceRepository() -> any AnnonceRepository {
+        AnnonceRepositoryImpl(apiClient: apiClient)
+    }
+
+    private func makeMessageRepository() -> any MessageRepository {
+        MessageRepositoryImpl(apiClient: apiClient, keychainStorage:keychainStorage)
+    }
+
+    private func makeOffreRepository() -> any OffreRepository {
+        OffreRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
+    }
+
+    private func makeTransactionRepository() -> any TransactionRepository {
+        TransactionRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
+    }
+
+    private func makeLivraisonRepository() -> any LivraisonRepository {
+        LivraisonRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
+    }
+
+    private func makeUserRepository() -> any UserRepository {
+        UserRepositoryImpl(apiClient: apiClient)
+    }
+
+    private func makeBoostRepository() -> any BoostRepository {
+        BoostRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
+    }
+
+    func makeLoginViewModel() -> LoginViewModel {
+        LoginViewModel(repository: makeAuthRepository())
+    }
+
+    func makeRegisterViewModel() -> RegisterViewModel {
+        RegisterViewModel(repository: makeAuthRepository())
+    }
+
+    func makeHomeViewModel() -> HomeViewModel {
+        HomeViewModel(repository: makeAnnonceRepository())
+    }
+
+    func makeAnnonceDetailViewModel() -> AnnonceDetailViewModel {
+        AnnonceDetailViewModel(
+            annonceRepository: makeAnnonceRepository(),
+            offreRepository:   makeOffreRepository()
+        )
+    }
+
+    func makeCreateAnnonceViewModel() -> CreateAnnonceViewModel {
+        CreateAnnonceViewModel(repository: makeAnnonceRepository())
+    }
+
+    func makeConversationsViewModel() -> ConversationsViewModel {
+        ConversationsViewModel(repository: makeMessageRepository())
+    }
+
+    func makeChatViewModel() -> ChatViewModel {
+        ChatViewModel(repository: makeMessageRepository())
+    }
+
+    func makeProfileViewModel() -> ProfileViewModel {
+        ProfileViewModel(
+            userRepository: makeUserRepository(),
+            authRepository: makeAuthRepository()
+        )
+    }
+
+    func makeLivraisonViewModel() -> LivraisonViewModel {
+        LivraisonViewModel(
+            livraisonRepository:   makeLivraisonRepository(),
+            transactionRepository: makeTransactionRepository()
+        )
+    }
+}
