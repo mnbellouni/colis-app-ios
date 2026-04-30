@@ -10,13 +10,28 @@ protocol AppFactory {
     func makeChatViewModel()            -> ChatViewModel
     func makeProfileViewModel()         -> ProfileViewModel
     func makeLivraisonViewModel()       -> LivraisonViewModel
+    func makeTrajetViewModel()          -> TrajetViewModel
 }
 
 final class ProductionAppFactory: AppFactory {
 
     private let keychainStorage  = KeychainStorage()
-    private lazy var apiClient = APIClient(keychainStorage: keychainStorage)
-
+    private let authState: AuthState
+    
+    init(authState: AuthState) {
+            self.authState = authState
+    }
+    
+    private lazy var apiClient: APIClient = {
+            let client = APIClient(keychainStorage: keychainStorage)
+            client.onUnauthorized = { [weak self] in
+                Task { @MainActor in
+                    self?.authState.logout()
+                }
+            }
+            return client
+    }()
+    
     private func makeAuthRepository() -> any AuthRepository {
         AuthRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
     }
@@ -47,6 +62,10 @@ final class ProductionAppFactory: AppFactory {
 
     private func makeBoostRepository() -> any BoostRepository {
         BoostRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
+    }
+    
+    private func makeTrajetRepository() -> any TrajetRepository {
+        TrajetRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
     }
 
     func makeLoginViewModel() -> LoginViewModel {
@@ -92,5 +111,9 @@ final class ProductionAppFactory: AppFactory {
             livraisonRepository:   makeLivraisonRepository(),
             transactionRepository: makeTransactionRepository()
         )
+    }
+    
+    func makeTrajetViewModel() -> TrajetViewModel {
+        TrajetViewModel(repository: makeTrajetRepository())
     }
 }

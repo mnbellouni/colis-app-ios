@@ -10,6 +10,7 @@ struct AnnonceDetailView: View {
 
     @State private var vm: AnnonceDetailViewModel?
     @State private var showOffreSheet = false
+    @State private var showLogin = false
 
     var body: some View {
         ScrollView {
@@ -153,10 +154,18 @@ struct AnnonceDetailView: View {
                         // ── Bouton faire une offre ────────
                         if annonce.demandeurId != authState.userId
                             && annonce.statut == "ouverte" {
-                            AppButton(
-                                title:  "Faire une offre",
-                                action: { showOffreSheet = true }
-                            )
+                            if authState.isLoggedIn {
+                                AppButton(
+                                    title:  "Faire une offre",
+                                    action: { showOffreSheet = true }
+                                )
+                            } else {
+                                AppButton(
+                                    title:  "Connectez-vous pour faire une offre",
+                                    action: { showLogin = true },
+                                    style:  .secondary
+                                )
+                            }
                         }
                     }
                     .padding(20)

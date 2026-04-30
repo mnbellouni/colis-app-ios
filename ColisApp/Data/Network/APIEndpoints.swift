@@ -50,4 +50,8 @@ enum APIEndpoints {
     static var tags:        String { "\(AppConfig.baseURL)/tags" }
     static var zones:       String { "\(AppConfig.baseURL)/zones" }
     static var notifications: String { "\(AppConfig.baseURL)/notifications/token" }
+    
+    // ── Trajets ───────────────────────────────────────────────
+    static var trajets: String { "\(AppConfig.baseURL)/trajets" }
+    static func trajet(id: String) -> String { "\(AppConfig.baseURL)/trajets/\(id)" }
 }

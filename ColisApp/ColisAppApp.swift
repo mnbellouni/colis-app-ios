@@ -8,7 +8,7 @@ struct ColisAppApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environment(\.factory, ProductionAppFactory())
+                .environment(\.factory, ProductionAppFactory(authState: authState))
                 .environment(authState)
         }
     }

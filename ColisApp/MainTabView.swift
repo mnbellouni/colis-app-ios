@@ -2,12 +2,14 @@ import SwiftUI
 
 enum Tab: Int, CaseIterable {
     case home
+    case trajets
     case messages
     case profile
 
     var title: String {
         switch self {
         case .home:     return "Accueil"
+        case .trajets:  return "Trajets"
         case .messages: return "Messages"
         case .profile:  return "Profil"
         }
@@ -16,6 +18,7 @@ enum Tab: Int, CaseIterable {
     var icon: String {
         switch self {
         case .home:     return "house.fill"
+        case .trajets:  return "airplane"
         case .messages: return "message.fill"
         case .profile:  return "person.fill"
         }
@@ -28,27 +31,44 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
+
+            // ── Accueil (annonces) ────────────────────────
             NavigationStack {
                 HomeView()
             }
             .tabItem {
-                Label(Tab.home.title, systemImage: Tab.home.icon)
+                Label("Accueil", systemImage: "house.fill")
             }
             .tag(Tab.home)
 
+            // ── Trajets (voyageurs) ───────────────────────
             NavigationStack {
-                ConversationsView()
+                TrajetsView()
             }
             .tabItem {
-                Label(Tab.messages.title, systemImage: Tab.messages.icon)
+                Label("Trajets", systemImage: "airplane")
+            }
+            .tag(Tab.trajets)
+
+            // ── Messages (privé) ──────────────────────────
+            NavigationStack {
+                PrivateView {
+                    ConversationsView()
+                }
+            }
+            .tabItem {
+                Label("Messages", systemImage: "message.fill")
             }
             .tag(Tab.messages)
 
+            // ── Profil (privé) ────────────────────────────
             NavigationStack {
-                ProfileView()
+                PrivateView {
+                    ProfileView()
+                }
             }
             .tabItem {
-                Label(Tab.profile.title, systemImage: Tab.profile.icon)
+                Label("Profil", systemImage: "person.fill")
             }
             .tag(Tab.profile)
         }

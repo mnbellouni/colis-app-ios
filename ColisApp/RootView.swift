@@ -7,16 +7,12 @@ struct RootView: View {
     var body: some View {
         if authState.isLoggedIn {
             MainTabView()
-                .transition(.asymmetric(
-                    insertion:  .move(edge: .trailing),
-                    removal:    .move(edge: .leading)
-                ))
+                .transition(.move(edge: .trailing))
         } else {
-            AuthNavigationView()
-                .transition(.asymmetric(
-                    insertion:  .move(edge: .leading),
-                    removal:    .move(edge: .trailing)
-                ))
+            NavigationStack {
+                LoginView()
+            }
+            .transition(.move(edge: .leading))
         }
     }
 }

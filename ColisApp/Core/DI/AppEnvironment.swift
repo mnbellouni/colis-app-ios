@@ -1,7 +1,9 @@
 import SwiftUI
 
 private struct AppFactoryKey: EnvironmentKey {
-    static let defaultValue: any AppFactory = ProductionAppFactory()
+    static let defaultValue: any AppFactory = ProductionAppFactory(
+        authState: AuthState()
+    )
 }
 
 extension EnvironmentValues {

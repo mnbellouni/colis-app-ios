@@ -40,6 +40,7 @@ final class KeychainStorage {
     func clear() {
         delete(forKey: Keys.accessToken)
         delete(forKey: Keys.refreshToken)
+        delete(forKey: Keys.idToken) 
         delete(forKey: Keys.userId)
         delete(forKey: Keys.userEmail)
         delete(forKey: Keys.userNom)
@@ -49,6 +50,7 @@ final class KeychainStorage {
     struct Keys {
         static let accessToken  = "access_token"
         static let refreshToken = "refresh_token"
+        static let idToken      = "id_token"
         static let userId       = "user_id"
         static let userEmail    = "user_email"
         static let userNom      = "user_nom"

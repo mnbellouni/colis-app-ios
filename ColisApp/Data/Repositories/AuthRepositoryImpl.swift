@@ -9,16 +9,16 @@ class AuthRepositoryImpl: AuthRepository {
         self.apiClient = apiClient
         self.keychainStorage  = keychainStorage
     }
-
+    
     func login(email: String, password: String) async throws -> AuthResponse {
         let response: AuthResponse = try await apiClient.post(
-            url: APIEndpoints.login,
-            body: ["email": email, "password": password],
+            url:          APIEndpoints.login,
+            body:         ["email": email, "password": password],
             requiresAuth: false
         )
-        // Sauvegarder les tokens
         keychainStorage.save(response.accessToken,  forKey: KeychainStorage.Keys.accessToken)
         keychainStorage.save(response.refreshToken, forKey: KeychainStorage.Keys.refreshToken)
+        keychainStorage.save(response.idToken,      forKey: KeychainStorage.Keys.idToken)
         keychainStorage.save(response.userId,       forKey: KeychainStorage.Keys.userId)
         keychainStorage.save(response.email,        forKey: KeychainStorage.Keys.userEmail)
         keychainStorage.save(response.nom,          forKey: KeychainStorage.Keys.userNom)
