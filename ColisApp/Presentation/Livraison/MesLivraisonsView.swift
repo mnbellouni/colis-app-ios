@@ -15,6 +15,35 @@ struct MesLivraisonsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
 
+                        // ── Code colis ────────────────────
+                        if let tracking = vm?.tracking {
+                            NavigationLink {
+                                ColisCodeView(tracking: tracking)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "number.square")
+                                        .font(.system(size: 22))
+                                        .foregroundColor(.appPrimary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Code colis")
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(.appTextSecondary)
+                                        Text(tracking.codeFormate)
+                                            .font(.system(size: 20, weight: .heavy, design: .monospaced))
+                                            .foregroundColor(.appPrimary)
+                                            .kerning(2)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.appTextTertiary)
+                                }
+                                .padding(16)
+                                .background(Color.appPrimaryLight)
+                                .cornerRadius(16)
+                            }
+                        }
+
                         // ── Statut ────────────────────────
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Statut")
@@ -38,8 +67,8 @@ struct MesLivraisonsView: View {
                             }
                         }
                         .padding(16)
-                        .background(Color.white)
-                        .cornerRadius(14)
+                        .background(Color.appCard)
+                        .cornerRadius(16)
 
                         // ── Actions voyageur ──────────────
                         if livraison.voyageurId == authState.userId {
@@ -75,6 +104,8 @@ struct MesLivraisonsView: View {
         .background(Color.appBackground)
         .navigationTitle("Mes livraisons")
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
         .task {
             vm = factory.makeLivraisonViewModel()
         }

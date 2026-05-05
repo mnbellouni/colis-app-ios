@@ -1,8 +1,9 @@
 import Foundation
-import Combine
+import Observation
 
+@Observable
 @MainActor
-final class HomeViewModel: ObservableObject {
+final class HomeViewModel {
 
     private let repository: any AnnonceRepository
 
@@ -10,10 +11,10 @@ final class HomeViewModel: ObservableObject {
         self.repository = repository
     }
 
-    @Published var annonces:      [Annonce] = []
-    @Published var isLoading      = false
-    @Published var error: String? = nil
-    @Published var selectedType: String? = nil
+    var annonces:      [Annonce] = []
+    var isLoading      = false
+    var error: String? = nil
+    var selectedType: String? = nil
 
     func loadAnnonces(type: String? = nil, categorie: String? = nil) async {
         isLoading = true

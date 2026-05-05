@@ -21,15 +21,15 @@ struct AppTextField: View {
                         .keyboardType(keyboardType)
                 }
             }
-            .font(.system(size: 16))
+            .font(.system(size: 15))
             .foregroundColor(.appTextPrimary)
             .padding(.horizontal, 14)
-            .padding(.vertical, 14)
-            .background(Color.appBackground)
-            .cornerRadius(10)
+            .padding(.vertical, 13)
+            .background(Color.appCanvas)
+            .cornerRadius(13)
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.appBorder, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 13)
+                    .stroke(Color.appBorder, lineWidth: 1.5)
             )
         }
     }

@@ -198,6 +198,27 @@ struct EvaluationResult: Codable {
     let total: Int
 }
 
+// ── Tracking Colis ────────────────────────────────────────
+struct ColisTracking: Codable {
+    let code: String
+    let livraisonId: String
+    let annonceId: String
+    let titre: String
+    let villeDepart: String
+    let villeArrivee: String
+    let paysDepart: String
+    let paysArrivee: String
+    let poids: Double
+    let categorie: String
+    let statut: String
+    let etapes: [Etape]
+    let expediteurId: String
+    let voyageurId: String
+    let createdAt: String
+
+    var codeFormate: String { ColisCodeGenerator.formatted(code) }
+}
+
 // ── Misc ──────────────────────────────────────────────────
 struct Tags: Codable {
     let urgence: [String]
@@ -213,6 +234,14 @@ struct Tags: Codable {
 
 // ── Trajet ──────────────────────────────────────────────────
 
+struct EtapeTrajet: Codable, Identifiable {
+    var id: String { "\(ville)-\(pays)" }
+    let ville: String
+    let adresse: String?
+    let pays: String
+    let dateDepart: String?
+}
+
 struct Trajet: Codable, Identifiable {
     let id: String
     let voyageurId: String
@@ -227,6 +256,7 @@ struct Trajet: Codable, Identifiable {
     let poidsRestant: Double
     let prixParKg: Double
     let categoriesAcceptees: [String]
+    let etapes: [EtapeTrajet]?
     let statut: String
     let createdAt: String
 

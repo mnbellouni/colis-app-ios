@@ -11,6 +11,11 @@ struct CreateAnnonceView: View {
     let categories = ["vetements", "electronique", "medicament",
                       "documents", "alimentaire", "cosmetique", "cadeau", "autre"]
     let pays = ["FR", "MA", "DZ", "TN", "ES", "IT", "DE", "BE", "GB"]
+    let allTags = [
+        "urgent", "tres_urgent", "fragile", "medicament",
+        "hospitalisation", "humanitaire", "lourd",
+        "encombrant", "perissable", "valeur_elevee"
+    ]
 
     var body: some View {
         NavigationStack {
@@ -63,6 +68,27 @@ struct CreateAnnonceView: View {
                                         isSelected: vm?.categorie == cat
                                     ) {
                                         vm?.categorie = cat
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Tags ──────────────────────────
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Tags")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.appTextSecondary)
+                        FlowLayout(spacing: 8) {
+                            ForEach(allTags, id: \.self) { tag in
+                                FilterChip(
+                                    label:      tag.replacingOccurrences(of: "_", with: " ").capitalized,
+                                    isSelected: vm?.tags.contains(tag) ?? false
+                                ) {
+                                    if vm?.tags.contains(tag) == true {
+                                        vm?.tags.removeAll { $0 == tag }
+                                    } else {
+                                        vm?.tags.append(tag)
                                     }
                                 }
                             }

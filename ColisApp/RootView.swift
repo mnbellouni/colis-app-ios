@@ -2,17 +2,15 @@ import SwiftUI
 
 struct RootView: View {
 
+    @Environment(\.factory)      private var factory
     @Environment(AuthState.self) private var authState
 
     var body: some View {
-        if authState.isLoggedIn {
-            MainTabView()
-                .transition(.move(edge: .trailing))
-        } else {
-            NavigationStack {
-                LoginView()
+        MainTabView()
+            .task {
+                if let f = factory as? ProductionAppFactory {
+                    await authState.refreshTokenIfNeeded(apiClient: f.apiClientForRefresh)
+                }
             }
-            .transition(.move(edge: .leading))
-        }
     }
 }

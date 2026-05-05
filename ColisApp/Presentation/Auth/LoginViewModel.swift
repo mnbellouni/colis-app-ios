@@ -1,8 +1,9 @@
 import Foundation
-import Combine
+import Observation
 
+@Observable
 @MainActor
-final class LoginViewModel: ObservableObject {
+final class LoginViewModel {
 
     private let repository: any AuthRepository
 
@@ -10,8 +11,8 @@ final class LoginViewModel: ObservableObject {
         self.repository = repository
     }
 
-    @Published var isLoading  = false
-    @Published var error: String? = nil
+    var isLoading  = false
+    var error: String? = nil
 
     func login(email: String, password: String, authState: AuthState) async {
         guard !email.isEmpty, !password.isEmpty else {

@@ -63,12 +63,14 @@ struct ChatView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.white)
+            .background(Color.appCard)
             .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: -2)
         }
         .background(Color.appBackground)
         .navigationTitle(autreUserId)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
         .task {
             vm = factory.makeChatViewModel()
             await vm?.load(

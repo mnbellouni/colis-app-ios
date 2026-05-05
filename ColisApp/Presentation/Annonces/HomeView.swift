@@ -8,6 +8,7 @@ struct HomeView: View {
     @State private var vm: HomeViewModel?
     @State private var selectedType: String? = nil
     @State private var showCreate = false
+    @State private var showLogin = false
 
     let types = [
         ("Tout",      nil as String?),
@@ -31,15 +32,20 @@ struct HomeView: View {
                                 .foregroundColor(.appTextPrimary)
                         }
                         Spacer()
+
                         Button {
-                            showCreate = true
+                            if authState.isLoggedIn {
+                                showCreate = true
+                            } else {
+                                showLogin = true
+                            }
                         } label: {
                             Image(systemName: "plus")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(width: 40, height: 40)
-                                .background(Color.appPrimary)
-                                .cornerRadius(12)
+                                .background(LinearGradient.appPrimary)
+                                .cornerRadius(13)
                         }
                     }
 
@@ -58,9 +64,9 @@ struct HomeView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 18)
                 .padding(.vertical, 16)
-                .background(Color.white)
+                .background(Color.appBackground)
 
                 // ── Contenu ───────────────────────────────
                 if vm?.isLoading == true {
@@ -109,6 +115,9 @@ struct HomeView: View {
             .sheet(isPresented: $showCreate) {
                 CreateAnnonceView()
             }
+            .sheet(isPresented: $showLogin) {
+                AuthNavigationView()
+            }
         }
         .task {
             vm = factory.makeHomeViewModel()
@@ -130,10 +139,10 @@ struct FilterChip: View {
                 .foregroundColor(isSelected ? .white : .appTextSecondary)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.appPrimary : Color.white)
-                .cornerRadius(20)
+                .background(isSelected ? Color.appPrimary : Color.appCanvas)
+                .cornerRadius(99)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: 99)
                         .stroke(isSelected ? Color.clear : Color.appBorder, lineWidth: 1)
                 )
         }

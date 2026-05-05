@@ -12,6 +12,7 @@ struct RegisterView: View {
     @State private var nom       = ""
     @State private var prenom    = ""
     @State private var telephone = ""
+    @State private var showCertification = false
 
     var body: some View {
         ScrollView {
@@ -92,7 +93,16 @@ struct RegisterView: View {
             vm = factory.makeRegisterViewModel()
         }
         .onChange(of: vm?.isSuccess ?? false) { _, success in
-            if success { dismiss() }
+            if success { showCertification = true }
+        }
+        .sheet(isPresented: $showCertification) {
+            CertificationFlowView(
+                accountNom: nom,
+                accountPrenom: prenom,
+                source: "Inscription"
+            ) {
+                dismiss()
+            }
         }
     }
 }

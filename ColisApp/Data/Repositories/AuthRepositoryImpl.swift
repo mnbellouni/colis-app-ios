@@ -23,6 +23,13 @@ class AuthRepositoryImpl: AuthRepository {
         keychainStorage.save(response.email,        forKey: KeychainStorage.Keys.userEmail)
         keychainStorage.save(response.nom,          forKey: KeychainStorage.Keys.userNom)
         keychainStorage.save(response.prenom,       forKey: KeychainStorage.Keys.userPrenom)
+
+        let expiry = Date().addingTimeInterval(Double(response.expiresIn))
+        keychainStorage.save(
+            String(expiry.timeIntervalSince1970),
+            forKey: KeychainStorage.Keys.tokenExpiry
+        )
+
         return response
     }
 

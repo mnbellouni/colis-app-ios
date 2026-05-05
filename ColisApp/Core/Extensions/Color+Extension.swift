@@ -1,20 +1,27 @@
 import SwiftUI
 
 extension Color {
-    static let appPrimary        = Color(hex: "534AB7")
-    static let appPrimaryLight   = Color(hex: "EEEDFE")
-    static let appBackground     = Color(hex: "F8F8FC")
-    static let appCard           = Color.white
-    static let appBorder         = Color(hex: "EBEBF0")
-    static let appTextPrimary    = Color(hex: "1A1A2E")
-    static let appTextSecondary  = Color(hex: "6B6B7A")
-    static let appTextTertiary   = Color(hex: "AEAEB8")
-    static let appSuccess        = Color(hex: "1D9E75")
-    static let appSuccessLight   = Color(hex: "E1F5EE")
-    static let appError          = Color(hex: "E53935")
-    static let appErrorLight     = Color(hex: "FAECE7")
-    static let appWarning        = Color(hex: "F5A623")
-    static let appWarningLight   = Color(hex: "FEF3E2")
+    static let appPrimary       = Color(hex: "00875A")
+    static let appPrimaryLight  = Color(hex: "E6F5EF")
+    static let appPrimaryMid    = Color(hex: "B3E0CF")
+    static let appPrimaryDark   = Color(hex: "00A870")
+    static let appBackground    = Color(hex: "FFFBF5")
+    static let appCanvas        = Color(hex: "F5F0E8")
+    static let appCard          = Color.white
+    static let appBorder        = Color(hex: "EDE8DF")
+    static let appTextPrimary   = Color(hex: "1C1917")
+    static let appTextSecondary = Color(hex: "78716C")
+    static let appTextTertiary  = Color(hex: "A8A29E")
+    static let appSuccess       = Color(hex: "00875A")
+    static let appSuccessLight  = Color(hex: "E6F5EF")
+    static let appError         = Color(hex: "E53935")
+    static let appErrorLight    = Color(hex: "FDEDED")
+    static let appWarning       = Color(hex: "F59E0B")
+    static let appWarningLight  = Color(hex: "FFF8E7")
+    static let appInfo          = Color(hex: "3B7DD8")
+    static let appInfoLight     = Color(hex: "EBF2FF")
+    static let appAccent        = Color(hex: "FF6B35")
+    static let appAccentLight   = Color(hex: "FFF0EA")
 
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -36,6 +43,24 @@ extension Color {
             green:   Double(g) / 255,
             blue:    Double(b) / 255,
             opacity: Double(a) / 255
+        )
+    }
+}
+
+@MainActor
+extension LinearGradient {
+    static var appPrimary: LinearGradient {
+        LinearGradient(
+            colors: [Color(hex: "00875A"), Color(hex: "00A870")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    static var appHero: LinearGradient {
+        LinearGradient(
+            colors: [Color(hex: "004D33"), Color(hex: "00875A")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
         )
     }
 }

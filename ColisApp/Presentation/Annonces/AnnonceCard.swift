@@ -1,101 +1,195 @@
 import SwiftUI
 
+// ── Carte Annonce ─────────────────────────────────────────
 struct AnnonceCard: View {
     let annonce: Annonce
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
 
-            // ── Header card ───────────────────────────────
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(annonce.titre)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.appTextPrimary)
-                        .lineLimit(2)
-
-                    HStack(spacing: 4) {
-                        Image(systemName: typeIcon)
-                            .font(.system(size: 11))
-                            .foregroundColor(.appPrimary)
-                        Text(typeLabel)
-                            .font(.system(size: 12))
-                            .foregroundColor(.appPrimary)
-                    }
+            // Chips catégorie + urgence | Favori
+            HStack(spacing: 6) {
+                CategoryChip(label: annonce.categorie)
+                if annonce.isUrgent {
+                    CategoryChip(label: "Urgent", style: .urgent)
                 }
                 Spacer()
-
-                // Prix
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(Int(annonce.budgetTransport)) €")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.appPrimary)
-                    if annonce.isBoosted {
-                        Text("⭐ Boosté")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.appWarning)
-                    }
-                }
-            }
-
-            // ── Route ─────────────────────────────────────
-            HStack(spacing: 8) {
-                RoutePoint(city: annonce.villeDepart, flag: annonce.paysDepart)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 12))
+                Image(systemName: "heart")
+                    .font(.system(size: 16))
                     .foregroundColor(.appTextTertiary)
-                RoutePoint(city: annonce.villeArrivee ?? "", flag: annonce.paysArrivee ?? "")
-                Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: "scalemass")
-                        .font(.system(size: 11))
-                        .foregroundColor(.appTextTertiary)
-                    Text("\(String(format: "%.1f", annonce.poids)) kg")
-                        .font(.system(size: 12))
-                        .foregroundColor(.appTextTertiary)
-                }
             }
 
-            // ── Tags ──────────────────────────────────────
-            if !annonce.tags.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(annonce.tags.prefix(3), id: \.self) { tag in
-                            TagBadge(tag: tag)
-                        }
+            // Titre
+            Text(annonce.titre)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.appTextPrimary)
+                .lineLimit(2)
+
+            // Route + poids
+            HStack(spacing: 6) {
+                Image(systemName: "mappin.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundColor(.appTextTertiary)
+                Text("\(annonce.villeDepart) → \(annonce.villeArrivee ?? "–") · \(String(format: "%.1f", annonce.poids)) kg")
+                    .font(.system(size: 13))
+                    .foregroundColor(.appTextSecondary)
+                    .lineLimit(1)
+            }
+
+            Divider()
+
+            // Avatar + étoiles | Prix
+            HStack(spacing: 8) {
+                AvatarView(seed: annonce.demandeurId, size: 32)
+                HStack(spacing: 2) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(Color(hex: "F59E0B"))
                     }
                 }
-            }
-
-            // ── Footer ────────────────────────────────────
-            HStack {
-                HStack(spacing: 4) {
-                    Image(systemName: "bubble.left")
-                        .font(.system(size: 12))
-                        .foregroundColor(.appTextTertiary)
-                    Text("\(Int(annonce.nbOffres)) offre\(annonce.nbOffres > 1 ? "s" : "")")
-                        .font(.system(size: 12))
+                Spacer()
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text("\(Int(annonce.budgetTransport))€")
+                        .font(.system(size: 20, weight: .heavy))
+                        .foregroundColor(.appPrimary)
+                    Text("budget")
+                        .font(.system(size: 10))
                         .foregroundColor(.appTextTertiary)
                 }
-                Spacer()
-                StatutBadge(statut: annonce.statut)
             }
         }
         .padding(16)
-        .background(Color.white)
-        .cornerRadius(14)
-        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
-    }
-
-    private var typeIcon: String {
-        annonce.isAchat ? "bag.fill" : "shippingbox.fill"
-    }
-
-    private var typeLabel: String {
-        annonce.isAchat ? "Achat + Transport" : "Transport"
+        .background(Color.appCard)
+        .cornerRadius(18)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.appBorder, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.07), radius: 10, x: 0, y: 2)
     }
 }
 
+// ── Category Chip ─────────────────────────────────────────
+struct CategoryChip: View {
+    let label: String
+    var style: ChipStyle = .category
+
+    enum ChipStyle { case category, urgent }
+
+    var body: some View {
+        Text(label.replacingOccurrences(of: "_", with: " ").capitalized)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(textColor)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(bgColor)
+            .cornerRadius(99)
+    }
+
+    private var textColor: Color {
+        style == .urgent ? .appError : categoryTextColor(label)
+    }
+
+    private var bgColor: Color {
+        style == .urgent ? .appErrorLight : categoryBgColor(label)
+    }
+
+    private func categoryTextColor(_ cat: String) -> Color {
+        switch cat.lowercased() {
+        case "electronique", "telephone", "informatique": return .appInfo
+        case "cosmetique", "beaute", "parfum":            return .appWarning
+        case "vetements", "mode", "accessoires":          return .appAccent
+        default:                                           return .appPrimary
+        }
+    }
+
+    private func categoryBgColor(_ cat: String) -> Color {
+        switch cat.lowercased() {
+        case "electronique", "telephone", "informatique": return .appInfoLight
+        case "cosmetique", "beaute", "parfum":            return .appWarningLight
+        case "vetements", "mode", "accessoires":          return .appAccentLight
+        default:                                           return .appPrimaryLight
+        }
+    }
+}
+
+// ── Avatar hue-based ──────────────────────────────────────
+struct AvatarView: View {
+    let seed: String
+    var size: CGFloat = 44
+    var showOnline: Bool = false
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            ZStack {
+                Circle().fill(avatarColor)
+                Text(initials)
+                    .font(.system(size: size * 0.33, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .frame(width: size, height: size)
+
+            if showOnline {
+                Circle()
+                    .fill(Color.appSuccess)
+                    .frame(width: size * 0.26, height: size * 0.26)
+                    .overlay(Circle().stroke(Color.appCard, lineWidth: 2))
+            }
+        }
+    }
+
+    private var initials: String {
+        let parts = seed.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        if parts.count >= 2 {
+            return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
+        }
+        return String(seed.prefix(2)).uppercased()
+    }
+
+    private var avatarColor: Color {
+        let v = seed.unicodeScalars.first?.value ?? 65
+        let hue = Double((v * 53) % 360) / 360.0
+        return Color(hue: hue, saturation: 0.52, brightness: 0.68)
+    }
+}
+
+// ── Statut Badge ──────────────────────────────────────────
+struct StatutBadge: View {
+    let statut: String
+
+    var body: some View {
+        Text(statut.replacingOccurrences(of: "_", with: " ").capitalized)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
+            .background(backgroundColor)
+            .cornerRadius(99)
+    }
+
+    private var color: Color {
+        switch statut {
+        case "ouverte", "livre", "confirme": return .appSuccess
+        case "en_transit", "recupere":       return .appInfo
+        case "en_attente", "en_negociation": return .appWarning
+        case "litige":                       return .appError
+        default:                             return .appTextSecondary
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch statut {
+        case "ouverte", "livre", "confirme": return .appSuccessLight
+        case "en_transit", "recupere":       return .appInfoLight
+        case "en_attente", "en_negociation": return .appWarningLight
+        case "litige":                       return .appErrorLight
+        default:                             return .appBorder
+        }
+    }
+}
+
+// ── RoutePoint (compatibilité) ────────────────────────────
 struct RoutePoint: View {
     let city: String
     let flag: String
@@ -111,46 +205,12 @@ struct RoutePoint: View {
     }
 }
 
-struct StatutBadge: View {
-    let statut: String
-
-    var body: some View {
-        Text(statut.capitalized)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundColor(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(backgroundColor)
-            .cornerRadius(20)
-    }
-
-    private var color: Color {
-        switch statut {
-        case "ouverte":        return .appSuccess
-        case "en_negociation": return .appWarning
-        case "pourvue":        return .appPrimary
-        default:               return .appTextSecondary
-        }
-    }
-
-    private var backgroundColor: Color {
-        switch statut {
-        case "ouverte":        return .appSuccessLight
-        case "en_negociation": return .appWarningLight
-        case "pourvue":        return .appPrimaryLight
-        default:               return .appBorder
-        }
-    }
-}
-
 extension String {
     var flagEmoji: String {
         let base: UInt32 = 127397
         var emoji = ""
         for scalar in self.unicodeScalars {
-            emoji.unicodeScalars.append(
-                Unicode.Scalar(base + scalar.value)!
-            )
+            emoji.unicodeScalars.append(Unicode.Scalar(base + scalar.value)!)
         }
         return emoji
     }

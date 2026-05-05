@@ -151,7 +151,7 @@ struct AnnonceDetailView: View {
                             }
                         }
 
-                        // ── Bouton faire une offre ────────
+                        // ── Boutons action ────────────────
                         if annonce.demandeurId != authState.userId
                             && annonce.statut == "ouverte" {
                             if authState.isLoggedIn {
@@ -159,6 +159,30 @@ struct AnnonceDetailView: View {
                                     title:  "Faire une offre",
                                     action: { showOffreSheet = true }
                                 )
+
+                                NavigationLink {
+                                    ChatView(
+                                        conversationId: [authState.userId ?? "", annonce.demandeurId].sorted().joined(separator: "_"),
+                                        autreUserId: annonce.demandeurId
+                                    )
+                                } label: {
+                                    HStack {
+                                        Spacer()
+                                        Image(systemName: "message.fill")
+                                            .font(.system(size: 14))
+                                        Text("Contacter l'expéditeur")
+                                            .font(.system(size: 16, weight: .semibold))
+                                        Spacer()
+                                    }
+                                    .foregroundColor(.appPrimary)
+                                    .frame(height: 52)
+                                    .background(Color.appCard)
+                                    .cornerRadius(13)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 13)
+                                            .stroke(Color.appPrimary, lineWidth: 1.5)
+                                    )
+                                }
                             } else {
                                 AppButton(
                                     title:  "Connectez-vous pour faire une offre",
@@ -168,7 +192,7 @@ struct AnnonceDetailView: View {
                             }
                         }
                     }
-                    .padding(20)
+                    .padding(18)
                 }
             } else if vm?.isLoading == true {
                 ProgressView()
@@ -179,15 +203,20 @@ struct AnnonceDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
         .background(Color.appBackground)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
         .sheet(isPresented: $showOffreSheet) {
             CreateOffreView(
                 annonceId: annonceId,
                 vm:        vm
             )
         }
+        .sheet(isPresented: $showLogin) {
+            AuthNavigationView()
+        }
         .task {
             vm = factory.makeAnnonceDetailViewModel()
-            await vm?.load(id: annonceId)
+            await vm?.load(id: annonceId, isLoggedIn: authState.isLoggedIn)
         }
     }
 }
@@ -211,7 +240,7 @@ struct DetailItem: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(Color.white)
+        .background(Color.appCard)
         .cornerRadius(10)
         .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
     }
@@ -242,7 +271,7 @@ struct OffreRow: View {
                 .foregroundColor(.appPrimary)
         }
         .padding(12)
-        .background(Color.white)
+        .background(Color.appCard)
         .cornerRadius(10)
         .overlay(
             RoundedRectangle(cornerRadius: 10)

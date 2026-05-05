@@ -11,6 +11,7 @@ protocol AppFactory {
     func makeProfileViewModel()         -> ProfileViewModel
     func makeLivraisonViewModel()       -> LivraisonViewModel
     func makeTrajetViewModel()          -> TrajetViewModel
+    func makeTrackingRepository()       -> any TrackingRepository
 }
 
 final class ProductionAppFactory: AppFactory {
@@ -22,6 +23,8 @@ final class ProductionAppFactory: AppFactory {
             self.authState = authState
     }
     
+    var apiClientForRefresh: APIClient { apiClient }
+
     private lazy var apiClient: APIClient = {
             let client = APIClient(keychainStorage: keychainStorage)
             client.onUnauthorized = { [weak self] in
@@ -66,6 +69,10 @@ final class ProductionAppFactory: AppFactory {
     
     private func makeTrajetRepository() -> any TrajetRepository {
         TrajetRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
+    }
+
+    func makeTrackingRepository() -> any TrackingRepository {
+        TrackingRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
     }
 
     func makeLoginViewModel() -> LoginViewModel {

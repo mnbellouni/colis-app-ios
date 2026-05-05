@@ -11,7 +11,7 @@ struct AuthNavigationView: View {
         }
         .onChange(of: authState.isLoggedIn) { _, isLoggedIn in
             if isLoggedIn {
-                dismiss() // ✅ Ferme la sheet après connexion
+                dismiss()
             }
         }
     }

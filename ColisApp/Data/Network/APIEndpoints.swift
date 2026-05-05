@@ -12,6 +12,7 @@ enum APIEndpoints {
     static var users:     String { "\(AppConfig.baseURL)/users" }
     static func user(id: String) -> String { "\(AppConfig.baseURL)/users/\(id)" }
     static func userEvaluations(id: String) -> String { "\(AppConfig.baseURL)/users/\(id)/evaluations" }
+    static func userCertification(id: String) -> String { "\(AppConfig.baseURL)/users/\(id)/certification" }
 
     // ── Annonces ──────────────────────────────────────────
     static var annonces:  String { "\(AppConfig.baseURL)/annonces" }
@@ -51,6 +52,10 @@ enum APIEndpoints {
     static var zones:       String { "\(AppConfig.baseURL)/zones" }
     static var notifications: String { "\(AppConfig.baseURL)/notifications/token" }
     
+    // ── Tracking ──────────────────────────────────────────────
+    static func trackingByCode(code: String) -> String { "\(AppConfig.baseURL)/tracking/\(code)" }
+    static func trackingForLivraison(livraisonId: String) -> String { "\(AppConfig.baseURL)/livraisons/\(livraisonId)/tracking" }
+
     // ── Trajets ───────────────────────────────────────────────
     static var trajets: String { "\(AppConfig.baseURL)/trajets" }
     static func trajet(id: String) -> String { "\(AppConfig.baseURL)/trajets/\(id)" }

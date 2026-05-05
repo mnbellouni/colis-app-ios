@@ -7,7 +7,7 @@ struct AppButton: View {
     var style: ButtonStyle = .primary
 
     enum ButtonStyle {
-        case primary, secondary, destructive
+        case primary, secondary, outline, danger
     }
 
     var body: some View {
@@ -19,41 +19,49 @@ struct AppButton: View {
                         .scaleEffect(0.8)
                 }
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(foregroundColor)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(backgroundColor)
-            .cornerRadius(12)
+            .frame(height: 50)
+            .background(background)
+            .cornerRadius(13)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(borderColor, lineWidth: style == .secondary ? 1.5 : 0)
+                RoundedRectangle(cornerRadius: 13)
+                    .stroke(borderColor, lineWidth: style == .outline ? 1.5 : 0)
+            )
+            .shadow(
+                color: style == .primary ? Color(hex: "00875A").opacity(0.30) : .clear,
+                radius: 10, x: 0, y: 4
             )
         }
         .disabled(isLoading)
     }
 
-    private var backgroundColor: Color {
+    @ViewBuilder
+    private var background: some View {
         switch style {
-        case .primary:     return .appPrimary
-        case .secondary:   return .white
-        case .destructive: return .appErrorLight
+        case .primary:
+            LinearGradient.appPrimary
+        case .secondary:
+            Color.appPrimaryLight
+        case .outline:
+            Color.clear
+        case .danger:
+            Color.appErrorLight
         }
     }
 
     private var foregroundColor: Color {
         switch style {
-        case .primary:     return .white
-        case .secondary:   return .appPrimary
-        case .destructive: return .appError
+        case .primary:   return .white
+        case .secondary: return .appPrimary
+        case .outline:   return .appTextSecondary
+        case .danger:    return .appError
         }
     }
 
     private var borderColor: Color {
-        switch style {
-        case .secondary: return .appPrimary
-        default:         return .clear
-        }
+        style == .outline ? Color.appBorder : .clear
     }
 }

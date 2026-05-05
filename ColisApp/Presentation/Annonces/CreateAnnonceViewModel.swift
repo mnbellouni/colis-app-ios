@@ -1,8 +1,9 @@
 import Foundation
-import Combine
+import Observation
 
+@Observable
 @MainActor
-final class CreateAnnonceViewModel: ObservableObject {
+final class CreateAnnonceViewModel {
 
     private let repository: any AnnonceRepository
 
@@ -10,26 +11,26 @@ final class CreateAnnonceViewModel: ObservableObject {
         self.repository = repository
     }
 
-    @Published var isLoading     = false
-    @Published var isSuccess     = false
-    @Published var annonce: Annonce? = nil
-    @Published var error: String? = nil
+    var isLoading     = false
+    var isSuccess     = false
+    var annonce: Annonce? = nil
+    var error: String? = nil
 
-    @Published var type           = "transport"
-    @Published var titre          = ""
-    @Published var description    = ""
-    @Published var categorie      = ""
-    @Published var sousCategorie  = ""
-    @Published var tags:          [String] = []
-    @Published var poids          = ""
-    @Published var fragile        = false
-    @Published var budget         = ""
-    @Published var paysDepart     = "FR"
-    @Published var villeDepart    = ""
-    @Published var adresseDepart  = ""
-    @Published var paysArrivee    = "MA"
-    @Published var villeArrivee   = ""
-    @Published var adresseArrivee = ""
+    var type           = "transport"
+    var titre          = ""
+    var description    = ""
+    var categorie      = ""
+    var sousCategorie  = ""
+    var tags:          [String] = []
+    var poids          = ""
+    var fragile        = false
+    var budget         = ""
+    var paysDepart     = "FR"
+    var villeDepart    = ""
+    var adresseDepart  = ""
+    var paysArrivee    = "MA"
+    var villeArrivee   = ""
+    var adresseArrivee = ""
 
     func createAnnonce(userId: String) async {
         guard !titre.isEmpty, !categorie.isEmpty,

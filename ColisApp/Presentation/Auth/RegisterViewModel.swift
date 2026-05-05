@@ -1,8 +1,9 @@
 import Foundation
-import Combine
+import Observation
 
+@Observable
 @MainActor
-final class RegisterViewModel: ObservableObject {
+final class RegisterViewModel {
 
     private let repository: any AuthRepository
 
@@ -10,9 +11,9 @@ final class RegisterViewModel: ObservableObject {
         self.repository = repository
     }
 
-    @Published var isLoading  = false
-    @Published var isSuccess  = false
-    @Published var error: String? = nil
+    var isLoading  = false
+    var isSuccess  = false
+    var error: String? = nil
 
     func register(
         email: String,

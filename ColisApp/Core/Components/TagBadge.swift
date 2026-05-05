@@ -5,12 +5,12 @@ struct TagBadge: View {
 
     var body: some View {
         Text(tag.replacingOccurrences(of: "_", with: " "))
-            .font(.system(size: 11, weight: .medium))
+            .font(.system(size: 11, weight: .semibold))
             .foregroundColor(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
             .background(backgroundColor)
-            .cornerRadius(20)
+            .cornerRadius(99)
     }
 
     private var color: Color {

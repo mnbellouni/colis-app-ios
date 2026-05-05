@@ -29,8 +29,16 @@ final class APIClient {
         urlRequest.httpMethod = method
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        // ── Injection du token ────────────────────────────
+        // ── Injection du token (refresh proactif si proche expiration) ──
         if requiresAuth {
+            if isTokenExpiringSoon() {
+                let refreshed = await tryRefreshToken()
+                if !refreshed {
+                    onUnauthorized?()
+                    throw APIError.unauthorized
+                }
+            }
+
             guard let token = keychainStorage.get(forKey: KeychainStorage.Keys.accessToken) else {
                 onUnauthorized?()
                 throw APIError.unauthorized
@@ -99,6 +107,25 @@ final class APIClient {
         }
     }
 
+    // ── Verification proactive de l'expiration ──────────
+    private func isTokenExpiringSoon() -> Bool {
+        guard let expiryString = keychainStorage.get(forKey: KeychainStorage.Keys.tokenExpiry),
+              let expiryInterval = Double(expiryString) else {
+            return false
+        }
+        let expiryDate = Date(timeIntervalSince1970: expiryInterval)
+        let margin: TimeInterval = 5 * 60
+        return Date().addingTimeInterval(margin) >= expiryDate
+    }
+
+    private func saveTokenExpiry(expiresIn: Int) {
+        let expiry = Date().addingTimeInterval(Double(expiresIn))
+        keychainStorage.save(
+            String(expiry.timeIntervalSince1970),
+            forKey: KeychainStorage.Keys.tokenExpiry
+        )
+    }
+
     // ── Refresh Token ─────────────────────────────────────
     private func tryRefreshToken() async -> Bool {
         guard let refreshToken = keychainStorage.get(
@@ -126,6 +153,7 @@ final class APIClient {
             if let idToken = result.idToken {
                 keychainStorage.save(idToken, forKey: KeychainStorage.Keys.idToken)
             }
+            saveTokenExpiry(expiresIn: result.expiresIn)
             return true
         } catch {
             return false
