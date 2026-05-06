@@ -2,10 +2,11 @@ import SwiftUI
 
 struct ProfileView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
-    @State private var vm: ProfileViewModel?
+    @StateObject private var vmHolder = VMHolder<ProfileViewModel>()
+    private var vm: ProfileViewModel? { vmHolder.vm }
     @State private var showEdit = false
     @State private var showCertification = false
     @State private var certificationStatus = "non_soumis"
@@ -117,6 +118,16 @@ struct ProfileView: View {
                         }
                         .buttonStyle(.plain)
 
+                        NavigationLink {
+                            TrajetsView()
+                        } label: {
+                            ProfileMenuRow(
+                                icon: "map.fill", iconColor: Color(hex: "0EA5E9"),
+                                label: "Mes trajets", subtitle: "Créer et gérer mes trajets"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
                         ProfileMenuItem(
                             icon: "checkmark.shield.fill",
                             iconColor: certificationStatusColor,
@@ -170,7 +181,9 @@ struct ProfileView: View {
             .background(Color.appBackground)
             .navigationBarHidden(true)
             .sheet(isPresented: $showEdit) {
-                if let user = vm?.user { EditProfileView(user: user, vm: vm) }
+                if let vm, let user = vm.user {
+                    EditProfileView(user: user, vm: vm)
+                }
             }
             .sheet(isPresented: $showCertification) {
                 CertificationFlowView(
@@ -184,14 +197,14 @@ struct ProfileView: View {
                 await vm?.loadProfile(userId: authState.userId ?? "")
                 await loadCertificationStatus()
             }
-            .onChange(of: showCertification) { _, isPresented in
+            .onChange(of: showCertification) { isPresented in
                 if !isPresented {
                     Task { await loadCertificationStatus() }
                 }
             }
         }
         .task {
-            vm = factory.makeProfileViewModel()
+            vmHolder.vm = factory.makeProfileViewModel()
             await vm?.loadProfile(userId: authState.userId ?? "")
             await loadCertificationStatus()
         }
@@ -385,7 +398,7 @@ struct EvaluationRow: View {
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
     let user: User
-    let vm: ProfileViewModel?
+    @ObservedObject var vm: ProfileViewModel
 
     @State private var nom       = ""
     @State private var prenom    = ""
@@ -402,7 +415,7 @@ struct EditProfileView: View {
                     AppTextField(title: "Bio",       placeholder: user.bio,       text: $bio)
                     AppButton(title: "Sauvegarder", action: {
                         Task {
-                            await vm?.updateProfile(
+                            await vm.updateProfile(
                                 userId:    user.id,
                                 nom:       nom.isEmpty       ? user.nom       : nom,
                                 prenom:    prenom.isEmpty    ? user.prenom    : prenom,
@@ -411,7 +424,7 @@ struct EditProfileView: View {
                             )
                             dismiss()
                         }
-                    }, isLoading: vm?.isLoading ?? false)
+                    }, isLoading: vm.isLoading)
                 }
                 .padding(18)
             }
@@ -431,8 +444,8 @@ struct EditProfileView: View {
 // ── Certification Flow ───────────────────────────────────
 struct CertificationFlowView: View {
 
-    @Environment(\.dismiss) private var dismiss
-    @Environment(AuthState.self) private var authState
+    @Environment(\.dismiss)        private var dismiss
+    @EnvironmentObject private var authState: AuthState
 
     let accountNom: String
     let accountPrenom: String

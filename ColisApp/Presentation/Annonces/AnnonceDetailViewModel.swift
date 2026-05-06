@@ -1,9 +1,8 @@
 import Foundation
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class AnnonceDetailViewModel {
+final class AnnonceDetailViewModel: ObservableObject {
 
     private let annonceRepository: any AnnonceRepository
     private let offreRepository:   any OffreRepository
@@ -16,11 +15,11 @@ final class AnnonceDetailViewModel {
         self.offreRepository   = offreRepository
     }
 
-    var annonce:      Annonce? = nil
-    var offres:       [Offre] = []
-    var isLoading     = false
-    var offreEnvoyee  = false
-    var error: String? = nil
+    @Published var annonce:      Annonce? = nil
+    @Published var offres:       [Offre] = []
+    @Published var isLoading     = false
+    @Published var offreEnvoyee  = false
+    @Published var error: String? = nil
 
     func load(id: String, isLoggedIn: Bool = false) async {
         isLoading = true

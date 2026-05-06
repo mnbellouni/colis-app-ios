@@ -2,8 +2,8 @@ import SwiftUI
 
 struct RootView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
     var body: some View {
         MainTabView()

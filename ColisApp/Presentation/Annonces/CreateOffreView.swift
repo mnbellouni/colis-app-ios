@@ -2,11 +2,11 @@ import SwiftUI
 
 struct CreateOffreView: View {
 
-    @Environment(AuthState.self) private var authState
-    @Environment(\.dismiss)      private var dismiss
+    @EnvironmentObject private var authState: AuthState
+    @Environment(\.dismiss)        private var dismiss
 
     let annonceId: String
-    let vm: AnnonceDetailViewModel?
+    @ObservedObject var vm: AnnonceDetailViewModel
 
     @State private var message        = ""
     @State private var fraisService   = ""
@@ -69,7 +69,7 @@ struct CreateOffreView: View {
                             .labelsHidden()
                     }
 
-                    if let error = vm?.error {
+                    if let error = vm.error {
                         ErrorBanner(message: error)
                     }
 
@@ -78,7 +78,7 @@ struct CreateOffreView: View {
                         action: {
                             Task {
                                 let formatter = ISO8601DateFormatter()
-                                await vm?.envoyerOffre(
+                                await vm.envoyerOffre(
                                     annonceId:      annonceId,
                                     message:        message,
                                     fraisService:   Double(fraisService) ?? 0,
@@ -92,7 +92,7 @@ struct CreateOffreView: View {
                                 dismiss()
                             }
                         },
-                        isLoading: vm?.isLoading ?? false
+                        isLoading: vm.isLoading
                     )
                 }
                 .padding(20)

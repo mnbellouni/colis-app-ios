@@ -2,14 +2,14 @@ import SwiftUI
 
 struct AuthNavigationView: View {
 
-    @Environment(AuthState.self) private var authState
+    @EnvironmentObject private var authState: AuthState
     @Environment(\.dismiss)      private var dismiss
 
     var body: some View {
         NavigationStack {
             LoginView()
         }
-        .onChange(of: authState.isLoggedIn) { _, isLoggedIn in
+        .onChange(of: authState.isLoggedIn) { isLoggedIn in
             if isLoggedIn {
                 dismiss()
             }

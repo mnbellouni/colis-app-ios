@@ -2,7 +2,7 @@ import SwiftUI
 
 struct PrivateView<Content: View>: View {
 
-    @Environment(AuthState.self) private var authState
+    @EnvironmentObject private var authState: AuthState
     @State private var showAuth = false
     let content: () -> Content
 

@@ -2,10 +2,11 @@ import SwiftUI
 
 struct MesLivraisonsView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
-    @State private var vm: LivraisonViewModel?
+    @StateObject private var vmHolder = VMHolder<LivraisonViewModel>()
+    private var vm: LivraisonViewModel? { vmHolder.vm }
 
     var body: some View {
         Group {
@@ -107,7 +108,7 @@ struct MesLivraisonsView: View {
         .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
         .toolbarColorScheme(.light, for: .navigationBar)
         .task {
-            vm = factory.makeLivraisonViewModel()
+            vmHolder.vm = factory.makeLivraisonViewModel()
         }
     }
 }

@@ -22,6 +22,7 @@ enum APIEndpoints {
     static func annoncePhotos(id: String) -> String { "\(AppConfig.baseURL)/annonces/\(id)/photos" }
 
     // ── Offres ────────────────────────────────────────────
+    static var offresLimit: String { "\(AppConfig.baseURL)/offres/limit" }
     static func offreAccepter(id: String) -> String { "\(AppConfig.baseURL)/offres/\(id)/accepter" }
     static func offreRefuser(id: String) -> String { "\(AppConfig.baseURL)/offres/\(id)/refuser" }
 

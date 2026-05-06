@@ -2,15 +2,18 @@ import SwiftUI
 
 struct AnnonceDetailView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
-    @Environment(\.dismiss)      private var dismiss
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
+    @Environment(\.dismiss)        private var dismiss
 
     let annonceId: String
 
-    @State private var vm: AnnonceDetailViewModel?
+    @StateObject private var vmHolder = VMHolder<AnnonceDetailViewModel>()
+    private var vm: AnnonceDetailViewModel? { vmHolder.vm }
+
     @State private var showOffreSheet = false
     @State private var showLogin = false
+    @State private var certificationError: String? = nil
 
     var body: some View {
         ScrollView {
@@ -155,9 +158,18 @@ struct AnnonceDetailView: View {
                         if annonce.demandeurId != authState.userId
                             && annonce.statut == "ouverte" {
                             if authState.isLoggedIn {
+                                // Vérifier la certification
+                                let isCertified = authState.certificationStatus == "verifie"
+                                
                                 AppButton(
                                     title:  "Faire une offre",
-                                    action: { showOffreSheet = true }
+                                    action: {
+                                        if isCertified {
+                                            showOffreSheet = true
+                                        } else {
+                                            certificationError = "Vous devez être certifié pour faire une offre. Complétez votre certification depuis votre profil."
+                                        }
+                                    }
                                 )
 
                                 NavigationLink {
@@ -174,15 +186,16 @@ struct AnnonceDetailView: View {
                                             .font(.system(size: 16, weight: .semibold))
                                         Spacer()
                                     }
-                                    .foregroundColor(.appPrimary)
+                                    .foregroundColor(isCertified ? .appPrimary : .appTextTertiary)
                                     .frame(height: 52)
-                                    .background(Color.appCard)
+                                    .background(isCertified ? Color.appCard : Color.appBackground)
                                     .cornerRadius(13)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 13)
-                                            .stroke(Color.appPrimary, lineWidth: 1.5)
+                                            .stroke(isCertified ? Color.appPrimary : Color.appBorder, lineWidth: 1.5)
                                     )
                                 }
+                                .disabled(!isCertified)
                             } else {
                                 AppButton(
                                     title:  "Connectez-vous pour faire une offre",
@@ -206,16 +219,22 @@ struct AnnonceDetailView: View {
         .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
         .toolbarColorScheme(.light, for: .navigationBar)
         .sheet(isPresented: $showOffreSheet) {
-            CreateOffreView(
-                annonceId: annonceId,
-                vm:        vm
-            )
+            if let vm {
+                CreateOffreView(annonceId: annonceId, vm: vm)
+            }
         }
         .sheet(isPresented: $showLogin) {
             AuthNavigationView()
         }
+        .alert("Certification requise", isPresented: .constant(certificationError != nil)) {
+            Button("OK") { certificationError = nil }
+        } message: {
+            if let error = certificationError {
+                Text(error)
+            }
+        }
         .task {
-            vm = factory.makeAnnonceDetailViewModel()
+            vmHolder.vm = factory.makeAnnonceDetailViewModel()
             await vm?.load(id: annonceId, isLoggedIn: authState.isLoggedIn)
         }
     }

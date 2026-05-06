@@ -2,10 +2,12 @@ import SwiftUI
 
 struct TrajetsView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
-    @State private var vm: TrajetViewModel?
+    @StateObject private var vmHolder = VMHolder<TrajetViewModel>()
+    private var vm: TrajetViewModel? { vmHolder.vm }
+
     @State private var showCreate = false
     @State private var showLogin  = false
     @State private var showCertification = false
@@ -177,7 +179,11 @@ struct TrajetsView: View {
         .background(Color.appBackground)
         .navigationBarHidden(true)
         .navigationDestination(for: String.self) { TrajetDetailView(trajetId: $0) }
-        .sheet(isPresented: $showCreate) { CreateTrajetView(vm: vm) }
+        .sheet(isPresented: $showCreate) {
+            if let vm {
+                CreateTrajetView(vm: vm)
+            }
+        }
         .sheet(isPresented: $showLogin)  { AuthNavigationView() }
         .sheet(isPresented: $showCertification) {
             CertificationFlowView(
@@ -187,9 +193,11 @@ struct TrajetsView: View {
             )
         }
         .sheet(isPresented: Binding(get: { vm?.showFilters ?? false }, set: { vm?.showFilters = $0 })) {
-            TrajetFiltresView(vm: vm)
+            if let vm {
+                TrajetFiltresView(vm: vm)
+            }
         }
-        .onChange(of: authState.isLoggedIn) { _, isLoggedIn in
+        .onChange(of: authState.isLoggedIn) { isLoggedIn in
             guard isLoggedIn, resumeCreateAfterLogin else { return }
             resumeCreateAfterLogin = false
             Task {
@@ -197,7 +205,7 @@ struct TrajetsView: View {
             }
         }
         .task {
-            vm = factory.makeTrajetViewModel()
+            vmHolder.vm = factory.makeTrajetViewModel()
             await vm?.loadTrajets()
         }
     }
@@ -333,7 +341,7 @@ struct RouteLineView: View {
 // ── Filtres avancés ───────────────────────────────────────
 struct TrajetFiltresView: View {
     @Environment(\.dismiss) private var dismiss
-    let vm: TrajetViewModel?
+    @ObservedObject var vm: TrajetViewModel
     let moyens     = ["avion","voiture","train","bus","moto","bateau"]
     let categories = ["vetements","electronique","medicament","documents","alimentaire","cosmetique","cadeau","autre"]
 
@@ -341,20 +349,20 @@ struct TrajetFiltresView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    AppTextField(title: "Ville de départ",  placeholder: "Paris",      text: Binding(get: { vm?.filtreVilleDepart  ?? "" }, set: { vm?.filtreVilleDepart  = $0 }))
-                    AppTextField(title: "Ville d'arrivée",  placeholder: "Casablanca", text: Binding(get: { vm?.filtreVilleArrivee ?? "" }, set: { vm?.filtreVilleArrivee = $0 }))
+                    AppTextField(title: "Ville de départ",  placeholder: "Paris",      text: $vm.filtreVilleDepart)
+                    AppTextField(title: "Ville d'arrivée",  placeholder: "Casablanca", text: $vm.filtreVilleArrivee)
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Date de départ").font(.system(size: 13, weight: .medium)).foregroundColor(.appTextSecondary)
-                        DatePicker("", selection: Binding(get: { vm?.filtreDate ?? Date() }, set: { vm?.filtreDate = $0 }), displayedComponents: .date).labelsHidden()
+                        DatePicker("", selection: Binding(get: { vm.filtreDate ?? Date() }, set: { vm.filtreDate = $0 }), displayedComponents: .date).labelsHidden()
                     }
-                    chipSection("Catégorie", items: categories, sel: { vm?.filtreCategorie == $0 }) { vm?.filtreCategorie = (vm?.filtreCategorie == $0) ? "" : $0 }
-                    chipSection("Transport", items: moyens, sel: { vm?.filtreMoyen == $0 }) { vm?.filtreMoyen = (vm?.filtreMoyen == $0) ? "" : $0 }
+                    chipSection("Catégorie", items: categories, sel: { vm.filtreCategorie == $0 }) { vm.filtreCategorie = (vm.filtreCategorie == $0) ? "" : $0 }
+                    chipSection("Transport", items: moyens, sel: { vm.filtreMoyen == $0 }) { vm.filtreMoyen = (vm.filtreMoyen == $0) ? "" : $0 }
                     HStack(spacing: 12) {
-                        AppTextField(title: "Poids min (kg)",  placeholder: "5",  text: Binding(get: { vm?.filtrePoidsMin ?? "" }, set: { vm?.filtrePoidsMin = $0 }), keyboardType: .decimalPad)
-                        AppTextField(title: "Prix max (€/kg)", placeholder: "10", text: Binding(get: { vm?.filtrePrixMax  ?? "" }, set: { vm?.filtrePrixMax  = $0 }), keyboardType: .decimalPad)
+                        AppTextField(title: "Poids min (kg)",  placeholder: "5",  text: $vm.filtrePoidsMin, keyboardType: .decimalPad)
+                        AppTextField(title: "Prix max (€/kg)", placeholder: "10", text: $vm.filtrePrixMax,  keyboardType: .decimalPad)
                     }
-                    AppButton(title: "Appliquer les filtres") { Task { await vm?.appliquerFiltres() }; dismiss() }
-                    Button { vm?.clearAllFilters(); dismiss() } label: {
+                    AppButton(title: "Appliquer les filtres") { Task { await vm.appliquerFiltres() }; dismiss() }
+                    Button { vm.clearAllFilters(); dismiss() } label: {
                         Text("Réinitialiser").font(.system(size: 15, weight: .medium)).foregroundColor(.appError)
                     }
                 }

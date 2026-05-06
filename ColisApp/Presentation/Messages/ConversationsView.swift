@@ -2,10 +2,11 @@ import SwiftUI
 
 struct ConversationsView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
-    @State private var vm: ConversationsViewModel?
+    @StateObject private var vmHolder = VMHolder<ConversationsViewModel>()
+    private var vm: ConversationsViewModel? { vmHolder.vm }
 
     var body: some View {
         NavigationStack {
@@ -74,7 +75,7 @@ struct ConversationsView: View {
             .navigationBarHidden(true)
         }
         .task {
-            vm = factory.makeConversationsViewModel()
+            vmHolder.vm = factory.makeConversationsViewModel()
             await vm?.loadConversations()
         }
     }

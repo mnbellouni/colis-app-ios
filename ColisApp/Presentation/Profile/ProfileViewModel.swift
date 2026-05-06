@@ -1,9 +1,8 @@
 import Foundation
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class ProfileViewModel {
+final class ProfileViewModel: ObservableObject {
 
     private let userRepository: any UserRepository
     private let authRepository: any AuthRepository
@@ -16,11 +15,11 @@ final class ProfileViewModel {
         self.authRepository = authRepository
     }
 
-    var user:          User? = nil
-    var evaluations:   EvaluationResult? = nil
-    var isLoading      = false
-    var updateSuccess  = false
-    var error: String? = nil
+    @Published var user:          User? = nil
+    @Published var evaluations:   EvaluationResult? = nil
+    @Published var isLoading      = false
+    @Published var updateSuccess  = false
+    @Published var error: String? = nil
 
     func loadProfile(userId: String) async {
         isLoading = true

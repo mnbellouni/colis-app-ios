@@ -1,9 +1,8 @@
 import Foundation
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class ConversationsViewModel {
+final class ConversationsViewModel: ObservableObject {
 
     private let repository: any MessageRepository
 
@@ -11,9 +10,9 @@ final class ConversationsViewModel {
         self.repository = repository
     }
 
-    var conversations: [Conversation] = []
-    var isLoading      = false
-    var error: String? = nil
+    @Published var conversations: [Conversation] = []
+    @Published var isLoading      = false
+    @Published var error: String? = nil
 
     func loadConversations() async {
         isLoading = true

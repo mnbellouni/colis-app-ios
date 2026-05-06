@@ -1,9 +1,8 @@
 import Foundation
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class ChatViewModel {
+final class ChatViewModel: ObservableObject {
 
     private let repository: any MessageRepository
 
@@ -11,10 +10,10 @@ final class ChatViewModel {
         self.repository = repository
     }
 
-    var messages:  [Message] = []
-    var isLoading  = false
-    var isSending  = false
-    var error: String? = nil
+    @Published var messages:  [Message] = []
+    @Published var isLoading  = false
+    @Published var isSending  = false
+    @Published var error: String? = nil
 
     private var conversationId = ""
     private var autreUserId    = ""

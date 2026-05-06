@@ -76,7 +76,7 @@ final class ProductionAppFactory: AppFactory {
     }
 
     func makeLoginViewModel() -> LoginViewModel {
-        LoginViewModel(repository: makeAuthRepository())
+        LoginViewModel(repository: makeAuthRepository(), userRepository: makeUserRepository())
     }
 
     func makeRegisterViewModel() -> RegisterViewModel {

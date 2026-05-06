@@ -2,11 +2,12 @@ import SwiftUI
 
 struct CreateAnnonceView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
-    @Environment(\.dismiss)      private var dismiss
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
+    @Environment(\.dismiss)        private var dismiss
 
-    @State private var vm: CreateAnnonceViewModel?
+    @StateObject private var vmHolder = VMHolder<CreateAnnonceViewModel>()
+    private var vm: CreateAnnonceViewModel? { vmHolder.vm }
 
     let categories = ["vetements", "electronique", "medicament",
                       "documents", "alimentaire", "cosmetique", "cadeau", "autre"]
@@ -204,6 +205,36 @@ struct CreateAnnonceView: View {
                     }
                     .tint(.appPrimary)
 
+                    // ── Code de suivi (payant) ────────────
+                    VStack(alignment: .leading, spacing: 10) {
+                        Toggle(isOn: Binding(
+                            get: { vm?.avecCodeSuivi ?? false },
+                            set: { vm?.avecCodeSuivi = $0 }
+                        )) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Label("Code de suivi", systemImage: "qrcode")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(.appTextPrimary)
+                                    Text("0,99 €")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(Color.appPrimary)
+                                        .cornerRadius(99)
+                                }
+                                Text("Généré après confirmation de livraison. Permet le suivi du colis.")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.appTextSecondary)
+                            }
+                        }
+                        .tint(.appPrimary)
+                    }
+                    .padding(14)
+                    .background(Color.appPrimaryLight)
+                    .cornerRadius(12)
+
                     if let error = vm?.error {
                         ErrorBanner(message: error)
                     }
@@ -225,12 +256,12 @@ struct CreateAnnonceView: View {
                         .foregroundColor(.appPrimary)
                 }
             }
-            .onChange(of: vm?.isSuccess ?? false) { _, success in
+            .onChange(of: vm?.isSuccess ?? false) { success in
                 if success { dismiss() }
             }
         }
         .task {
-            vm = factory.makeCreateAnnonceViewModel()
+            vmHolder.vm = factory.makeCreateAnnonceViewModel()
         }
     }
 }

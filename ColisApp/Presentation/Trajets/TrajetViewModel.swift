@@ -1,9 +1,8 @@
 import Foundation
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class TrajetViewModel {
+final class TrajetViewModel: ObservableObject {
 
     private let repository: any TrajetRepository
 
@@ -11,38 +10,38 @@ final class TrajetViewModel {
         self.repository = repository
     }
 
-    var trajets:        [Trajet] = []
-    var selectedTrajet: Trajet? = nil
-    var isLoading   = false
-    var isSuccess   = false
-    var error: String? = nil
+    @Published var trajets:        [Trajet] = []
+    @Published var selectedTrajet: Trajet? = nil
+    @Published var isLoading   = false
+    @Published var isSuccess   = false
+    @Published var error: String? = nil
 
     // ── Champs formulaire création ───────────────────────
-    var villeDepart    = ""
-    var villeArrivee   = ""
-    var paysDepart     = "FR"
-    var paysArrivee    = "MA"
-    var dateDepart     = Date()
-    var dateArrivee    = Date()
-    var moyenTransport = "avion"
-    var poidsDisponible = ""
-    var prixParKg       = ""
-    var etapes: [EtapeTrajetForm] = []
-    var categoriesSelectionnees: Set<String> = []
+    @Published var villeDepart    = ""
+    @Published var villeArrivee   = ""
+    @Published var paysDepart     = "FR"
+    @Published var paysArrivee    = "MA"
+    @Published var dateDepart     = Date()
+    @Published var dateArrivee    = Date()
+    @Published var moyenTransport = "avion"
+    @Published var poidsDisponible = ""
+    @Published var prixParKg       = ""
+    @Published var etapes: [EtapeTrajetForm] = []
+    @Published var categoriesSelectionnees: Set<String> = []
 
     // ── Recherche rapide ─────────────────────────────────
-    var searchDepart  = ""
-    var searchArrivee = ""
+    @Published var searchDepart  = ""
+    @Published var searchArrivee = ""
 
     // ── Filtres avancés ──────────────────────────────────
-    var showFilters       = false
-    var filtreVilleDepart = ""
-    var filtreVilleArrivee = ""
-    var filtreDate: Date? = nil
-    var filtreCategorie   = ""
-    var filtreMoyen       = ""
-    var filtrePoidsMin    = ""
-    var filtrePrixMax     = ""
+    @Published var showFilters       = false
+    @Published var filtreVilleDepart = ""
+    @Published var filtreVilleArrivee = ""
+    @Published var filtreDate: Date? = nil
+    @Published var filtreCategorie   = ""
+    @Published var filtreMoyen       = ""
+    @Published var filtrePoidsMin    = ""
+    @Published var filtrePrixMax     = ""
 
     let moyens = ["avion", "voiture", "train", "bus", "moto", "bateau"]
 

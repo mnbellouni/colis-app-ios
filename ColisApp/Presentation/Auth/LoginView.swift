@@ -2,10 +2,12 @@ import SwiftUI
 
 struct LoginView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
-    @State private var vm: LoginViewModel?
+    @StateObject private var vmHolder = VMHolder<LoginViewModel>()
+    private var vm: LoginViewModel? { vmHolder.vm }
+
     @State private var email    = ""
     @State private var password = ""
     @State private var showRegister = false
@@ -85,7 +87,7 @@ struct LoginView: View {
             }
         }
         .task {
-            vm = factory.makeLoginViewModel()
+            vmHolder.vm = factory.makeLoginViewModel()
         }
     }
 }

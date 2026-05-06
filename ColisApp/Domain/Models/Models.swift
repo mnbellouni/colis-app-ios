@@ -23,7 +23,14 @@ struct User: Codable, Identifiable {
     let nbLivraisons: Double
     let verified: Bool
     let actif: Bool
+    let certificationStatus: String
+    let premium: Bool
+    let typeAbonnement: String?
     let createdAt: String
+
+    var abonnement: String { typeAbonnement ?? "standard" }
+    var isPro: Bool { abonnement == "pro" }
+    var isPremium: Bool { abonnement == "premium" || premium }
 
     var nomComplet: String { "\(prenom) \(nom)" }
 }
@@ -57,6 +64,8 @@ struct Annonce: Codable, Identifiable {
     let devise: String
     let dateLimite: String
     let statut: String
+    let actif: Bool?
+    let avecCodeSuivi: Bool?
     let boost: Bool
     let nbOffres: Double
     let paysDepart: String
@@ -74,6 +83,7 @@ struct Annonce: Codable, Identifiable {
     var isAchat: Bool { type == "achat_transport" }
     var isUrgent: Bool { tags.contains("urgent") || tags.contains("tres_urgent") }
     var isBoosted: Bool { boost }
+    var isActive: Bool { actif ?? true }
 }
 
 struct Achat: Codable {

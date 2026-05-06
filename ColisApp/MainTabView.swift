@@ -7,12 +7,6 @@ struct MainTabView: View {
             NavigationStack { HomeView() }
                 .tabItem { Label("Accueil", systemImage: "house.fill") }
 
-            NavigationStack { TrajetsView() }
-                .tabItem { Label("Trajets", systemImage: "map.fill") }
-
-            NavigationStack { SuiviColisView() }
-                .tabItem { Label("Envoyer", systemImage: "paperplane.fill") }
-
             NavigationStack { PrivateView { ConversationsView() } }
                 .tabItem { Label("Messages", systemImage: "bubble.left.fill") }
 

@@ -2,12 +2,13 @@ import SwiftUI
 
 struct TrajetDetailView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
     let trajetId: String
 
-    @State private var vm: TrajetViewModel?
+    @StateObject private var vmHolder = VMHolder<TrajetViewModel>()
+    private var vm: TrajetViewModel? { vmHolder.vm }
     @State private var showLogin = false
 
     private var trajet: Trajet? { vm?.selectedTrajet }
@@ -153,7 +154,7 @@ struct TrajetDetailView: View {
             AuthNavigationView()
         }
         .task {
-            vm = factory.makeTrajetViewModel()
+            vmHolder.vm = factory.makeTrajetViewModel()
             await vm?.loadTrajet(id: trajetId)
         }
     }

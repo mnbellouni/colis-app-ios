@@ -2,10 +2,12 @@ import SwiftUI
 
 struct HomeView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
-    @State private var vm: HomeViewModel?
+    @StateObject private var vmHolder = VMHolder<HomeViewModel>()
+    private var vm: HomeViewModel? { vmHolder.vm }
+
     @State private var selectedType: String? = nil
     @State private var showCreate = false
     @State private var showLogin = false
@@ -120,7 +122,7 @@ struct HomeView: View {
             }
         }
         .task {
-            vm = factory.makeHomeViewModel()
+            vmHolder.vm = factory.makeHomeViewModel()
             await vm?.loadAnnonces()
         }
     }

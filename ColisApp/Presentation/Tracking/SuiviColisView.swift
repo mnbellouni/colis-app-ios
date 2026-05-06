@@ -2,8 +2,8 @@ import SwiftUI
 
 struct SuiviColisView: View {
 
-    @Environment(\.factory)       private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
     @State private var codeInput  = ""
     @State private var tracking: ColisTracking?
@@ -70,7 +70,7 @@ struct SuiviColisView: View {
                                 .kerning(2)
                                 .textInputAutocapitalization(.characters)
                                 .autocorrectionDisabled()
-                                .onChange(of: codeInput) { _, v in codeInput = formatInput(v) }
+                                .onChange(of: codeInput) { v in codeInput = formatInput(v) }
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 14)

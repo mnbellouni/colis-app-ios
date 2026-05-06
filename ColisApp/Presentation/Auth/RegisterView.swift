@@ -1,12 +1,15 @@
 import SwiftUI
+import Combine
 
 struct RegisterView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
-    @Environment(\.dismiss)      private var dismiss
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
+    @Environment(\.dismiss)        private var dismiss
 
-    @State private var vm: RegisterViewModel?
+    @StateObject private var vmHolder = VMHolder<RegisterViewModel>()
+    private var vm: RegisterViewModel? { vmHolder.vm }
+
     @State private var email     = ""
     @State private var password  = ""
     @State private var nom       = ""
@@ -90,9 +93,9 @@ struct RegisterView: View {
         .background(Color.appBackground)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            vm = factory.makeRegisterViewModel()
+            vmHolder.vm = factory.makeRegisterViewModel()
         }
-        .onChange(of: vm?.isSuccess ?? false) { _, success in
+        .onChange(of: vm?.isSuccess ?? false) { success in
             if success { showCertification = true }
         }
         .sheet(isPresented: $showCertification) {

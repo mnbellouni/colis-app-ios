@@ -1,15 +1,17 @@
 import Foundation
-import Observation
+import Combine
 
-@Observable
-final class AuthState {
+@MainActor
+final class AuthState: ObservableObject {
+    
 
     private let keychain = KeychainStorage()
 
-    var isLoggedIn:  Bool    = false
-    var userId:      String? = nil
-    var userNom:     String? = nil
-    var userPrenom:  String? = nil
+    @Published var isLoggedIn:  Bool    = false
+    @Published var userId:      String? = nil
+    @Published var userNom:     String? = nil
+    @Published var userPrenom:  String? = nil
+    @Published var certificationStatus: String? = nil
 
     init() {
         refresh()
@@ -20,6 +22,7 @@ final class AuthState {
         userId     = keychain.get(forKey: KeychainStorage.Keys.userId)
         userNom    = keychain.get(forKey: KeychainStorage.Keys.userNom)
         userPrenom = keychain.get(forKey: KeychainStorage.Keys.userPrenom)
+        certificationStatus = keychain.get(forKey: "certificationStatus")
     }
 
     func refreshTokenIfNeeded(apiClient: APIClient) async {
@@ -72,5 +75,6 @@ final class AuthState {
         userId     = nil
         userNom    = nil
         userPrenom = nil
+        certificationStatus = nil
     }
 }

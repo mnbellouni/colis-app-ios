@@ -2,14 +2,17 @@ import SwiftUI
 
 struct ChatView: View {
 
-    @Environment(\.factory)      private var factory
-    @Environment(AuthState.self) private var authState
+    @Environment(\.factory)        private var factory
+    @EnvironmentObject private var authState: AuthState
 
     let conversationId: String
     let autreUserId:    String
 
-    @State private var vm: ChatViewModel?
+    @StateObject private var vmHolder = VMHolder<ChatViewModel>()
+    private var vm: ChatViewModel? { vmHolder.vm }
+
     @State private var messageText = ""
+    @State private var certificationError: String? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,7 +31,7 @@ struct ChatView: View {
                     }
                     .padding(16)
                 }
-                .onChange(of: vm?.messages.count ?? 0) { _, _ in
+                .onChange(of: vm?.messages.count ?? 0) { _ in
                     if let last = vm?.messages.last {
                         withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                     }
@@ -48,6 +51,11 @@ struct ChatView: View {
                     )
 
                 Button {
+                    if authState.certificationStatus != "verifie" {
+                        certificationError = "Vous devez etre certifie pour envoyer des messages. Completez votre certification depuis votre profil."
+                        return
+                    }
+                    
                     let text = messageText
                     messageText = ""
                     Task { await vm?.sendMessage(contenu: text) }
@@ -71,8 +79,15 @@ struct ChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
         .toolbarColorScheme(.light, for: .navigationBar)
+        .alert("Certification requise", isPresented: .constant(certificationError != nil)) {
+            Button("OK") { certificationError = nil }
+        } message: {
+            if let error = certificationError {
+                Text(error)
+            }
+        }
         .task {
-            vm = factory.makeChatViewModel()
+            vmHolder.vm = factory.makeChatViewModel()
             await vm?.load(
                 conversationId: conversationId,
                 autreUserId:    autreUserId,

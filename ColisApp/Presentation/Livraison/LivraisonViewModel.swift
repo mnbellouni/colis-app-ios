@@ -1,9 +1,8 @@
 import Foundation
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class LivraisonViewModel {
+final class LivraisonViewModel: ObservableObject {
 
     private let livraisonRepository:   any LivraisonRepository
     private let transactionRepository: any TransactionRepository
@@ -16,12 +15,12 @@ final class LivraisonViewModel {
         self.transactionRepository = transactionRepository
     }
 
-    var livraison:      Livraison? = nil
-    var transaction:    Transaction? = nil
-    var tracking:       ColisTracking? = nil
-    var isLoading       = false
-    var statutMisAJour  = false
-    var error: String?  = nil
+    @Published var livraison:      Livraison? = nil
+    @Published var transaction:    Transaction? = nil
+    @Published var tracking:       ColisTracking? = nil
+    @Published var isLoading       = false
+    @Published var statutMisAJour  = false
+    @Published var error: String?  = nil
 
     func load(livraisonId: String) async {
         isLoading = true
