@@ -9,7 +9,7 @@ struct AnnonceCard: View {
 
             // Chips catégorie + urgence | Favori
             HStack(spacing: 6) {
-                CategoryChip(label: annonce.categorie)
+                CategoryChip(label: annonce.categories.first ?? "")
                 if annonce.isUrgent {
                     CategoryChip(label: "Urgent", style: .urgent)
                 }

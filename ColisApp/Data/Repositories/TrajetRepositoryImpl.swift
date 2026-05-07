@@ -10,13 +10,19 @@ final class TrajetRepositoryImpl: TrajetRepository {
         self.keychainStorage  = keychainStorage
     }
 
-    func getTrajets(villeDepart: String? = nil, villeArrivee: String? = nil) async throws -> [Trajet] {
+    func getTrajets(villeDepart: String? = nil, villeArrivee: String? = nil, statut: String? = nil) async throws -> [Trajet] {
         var url = APIEndpoints.trajets
         var params: [String] = []
-        if let vd = villeDepart  { params.append("villeDepart=\(vd)") }
-        if let va = villeArrivee { params.append("villeArrivee=\(va)") }
+        if let vd = villeDepart  { params.append("villeDepart=\(vd.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? vd)") }
+        if let va = villeArrivee { params.append("villeArrivee=\(va.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? va)") }
+        if let s  = statut       { params.append("statut=\(s)") }
         if !params.isEmpty { url += "?" + params.joined(separator: "&") }
         return try await apiClient.get(url: url, requiresAuth: false)
+    }
+
+    func getMesTrajets() async throws -> [Trajet] {
+        let userId = keychainStorage.get(forKey: KeychainStorage.Keys.userId) ?? ""
+        return try await apiClient.get(url: "\(APIEndpoints.trajets)?voyageurId=\(userId)")
     }
 
     func getTrajet(id: String) async throws -> Trajet {

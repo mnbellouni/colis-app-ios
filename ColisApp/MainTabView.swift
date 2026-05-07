@@ -10,6 +10,9 @@ struct MainTabView: View {
             NavigationStack { PrivateView { ConversationsView() } }
                 .tabItem { Label("Messages", systemImage: "bubble.left.fill") }
 
+            NavigationStack { SuiviTabView() }
+                .tabItem { Label("Suivi", systemImage: "shippingbox.fill") }
+
             NavigationStack { PrivateView { ProfileView() } }
                 .tabItem { Label("Profil", systemImage: "person.fill") }
         }

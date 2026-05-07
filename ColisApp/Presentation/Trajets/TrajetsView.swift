@@ -197,8 +197,8 @@ struct TrajetsView: View {
                 TrajetFiltresView(vm: vm)
             }
         }
-        .onChange(of: authState.isLoggedIn) { isLoggedIn in
-            guard isLoggedIn, resumeCreateAfterLogin else { return }
+        .onChange(of: authState.isLoggedIn) {
+            guard authState.isLoggedIn, resumeCreateAfterLogin else { return }
             resumeCreateAfterLogin = false
             Task {
                 await handleCreateTrajetTap()
@@ -267,32 +267,27 @@ struct TrajetCard: View {
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text("\(String(format: "%.0f", trajet.prixParKg))€")
-                        .font(.system(size: 20, weight: .heavy))
-                        .foregroundColor(.appPrimary)
-                    Text("par kg")
-                        .font(.system(size: 10))
-                        .foregroundColor(.appTextTertiary)
+                if let prix = trajet.prixParKg {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("\(String(format: "%.0f", prix))€")
+                            .font(.system(size: 20, weight: .heavy))
+                            .foregroundColor(.appPrimary)
+                        Text("par kg")
+                            .font(.system(size: 10))
+                            .foregroundColor(.appTextTertiary)
+                    }
                 }
             }
 
             RouteLineView(depart: trajet.villeDepart, arrivee: trajet.villeArrivee, moyen: trajet.moyenTransport)
 
             HStack(alignment: .bottom, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 3).fill(Color.appBorder).frame(height: 5)
-                            RoundedRectangle(cornerRadius: 3).fill(Color.appPrimary)
-                                .frame(width: geo.size.width * CGFloat(min(trajet.poidsRestant / max(trajet.poidsDisponible, 0.1), 1.0)), height: 5)
-                        }
-                    }
-                    .frame(height: 5)
-                    Text("\(String(format: "%.0f", trajet.poidsRestant)) kg restants / \(String(format: "%.0f", trajet.poidsDisponible)) kg")
-                        .font(.system(size: 11))
-                        .foregroundColor(.appTextTertiary)
+                if let prix = trajet.prixParKg {
+                    Text("\(String(format: "%.2f", prix)) €/kg")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.appPrimary)
                 }
+                Spacer()
                 Text(formattedDate(trajet.dateDepart))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.appTextSecondary)
@@ -357,10 +352,7 @@ struct TrajetFiltresView: View {
                     }
                     chipSection("Catégorie", items: categories, sel: { vm.filtreCategorie == $0 }) { vm.filtreCategorie = (vm.filtreCategorie == $0) ? "" : $0 }
                     chipSection("Transport", items: moyens, sel: { vm.filtreMoyen == $0 }) { vm.filtreMoyen = (vm.filtreMoyen == $0) ? "" : $0 }
-                    HStack(spacing: 12) {
-                        AppTextField(title: "Poids min (kg)",  placeholder: "5",  text: $vm.filtrePoidsMin, keyboardType: .decimalPad)
-                        AppTextField(title: "Prix max (€/kg)", placeholder: "10", text: $vm.filtrePrixMax,  keyboardType: .decimalPad)
-                    }
+                    AppTextField(title: "Prix max (€/kg)", placeholder: "10", text: $vm.filtrePrixMax, keyboardType: .decimalPad)
                     AppButton(title: "Appliquer les filtres") { Task { await vm.appliquerFiltres() }; dismiss() }
                     Button { vm.clearAllFilters(); dismiss() } label: {
                         Text("Réinitialiser").font(.system(size: 15, weight: .medium)).foregroundColor(.appError)

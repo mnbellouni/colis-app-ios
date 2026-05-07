@@ -35,6 +35,8 @@ enum APIEndpoints {
     // ── Livraisons ────────────────────────────────────────
     static func livraison(id: String) -> String { "\(AppConfig.baseURL)/livraisons/\(id)" }
     static func livraisonStatut(id: String) -> String { "\(AppConfig.baseURL)/livraisons/\(id)/statut" }
+    static func mesLivraisons(role: String) -> String { "\(AppConfig.baseURL)/livraisons/me?role=\(role)" }
+    static func livraisonsForTrajet(trajetId: String) -> String { "\(AppConfig.baseURL)/trajets/\(trajetId)/livraisons" }
 
     // ── Messages ──────────────────────────────────────────
     static var messages:  String { "\(AppConfig.baseURL)/messages" }
@@ -51,6 +53,7 @@ enum APIEndpoints {
     // ── Misc ──────────────────────────────────────────────
     static var tags:        String { "\(AppConfig.baseURL)/tags" }
     static var zones:       String { "\(AppConfig.baseURL)/zones" }
+    static var pays:        String { "\(AppConfig.baseURL)/pays" }
     static var notifications: String { "\(AppConfig.baseURL)/notifications/token" }
     
     // ── Tracking ──────────────────────────────────────────────
@@ -60,4 +63,8 @@ enum APIEndpoints {
     // ── Trajets ───────────────────────────────────────────────
     static var trajets: String { "\(AppConfig.baseURL)/trajets" }
     static func trajet(id: String) -> String { "\(AppConfig.baseURL)/trajets/\(id)" }
+
+    // ── Favoris ───────────────────────────────────────────────
+    static var favoris: String { "\(AppConfig.baseURL)/favoris" }
+    static func favori(annonceId: String) -> String { "\(AppConfig.baseURL)/favoris/\(annonceId)" }
 }

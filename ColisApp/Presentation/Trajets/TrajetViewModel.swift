@@ -24,8 +24,7 @@ final class TrajetViewModel: ObservableObject {
     @Published var dateDepart     = Date()
     @Published var dateArrivee    = Date()
     @Published var moyenTransport = "avion"
-    @Published var poidsDisponible = ""
-    @Published var prixParKg       = ""
+    @Published var prixParKg      = ""
     @Published var etapes: [EtapeTrajetForm] = []
     @Published var categoriesSelectionnees: Set<String> = []
 
@@ -107,11 +106,8 @@ final class TrajetViewModel: ObservableObject {
         if !filtreMoyen.isEmpty {
             result = result.filter { $0.moyenTransport == filtreMoyen }
         }
-        if let poidsMin = Double(filtrePoidsMin), poidsMin > 0 {
-            result = result.filter { $0.poidsRestant >= poidsMin }
-        }
         if let prixMax = Double(filtrePrixMax), prixMax > 0 {
-            result = result.filter { $0.prixParKg <= prixMax }
+            result = result.filter { ($0.prixParKg ?? Double.greatestFiniteMagnitude) <= prixMax }
         }
         return result
     }
@@ -133,7 +129,8 @@ final class TrajetViewModel: ObservableObject {
         do {
             trajets = try await repository.getTrajets(
                 villeDepart:  villeDepart,
-                villeArrivee: villeArrivee
+                villeArrivee: villeArrivee,
+                statut:       nil
             )
         } catch {
             self.error = error.localizedDescription
@@ -179,8 +176,7 @@ final class TrajetViewModel: ObservableObject {
     }
 
     func createTrajet(userId: String) async {
-        guard !villeDepart.isEmpty, !villeArrivee.isEmpty,
-              !poidsDisponible.isEmpty, !prixParKg.isEmpty else {
+        guard !villeDepart.isEmpty, !villeArrivee.isEmpty else {
             error = "Veuillez remplir tous les champs"
             return
         }
@@ -196,23 +192,23 @@ final class TrajetViewModel: ObservableObject {
             ? ["vetements", "electronique", "documents", "autre"]
             : Array(categoriesSelectionnees)
 
+        var body: [String: Any] = [
+            "voyageurId":          userId,
+            "villeDepart":         villeDepart,
+            "villeArrivee":        villeArrivee,
+            "paysDepart":          paysDepart,
+            "paysArrivee":         paysArrivee,
+            "dateDepart":          formatter.string(from: dateDepart),
+            "dateArrivee":         formatter.string(from: dateArrivee),
+            "moyenTransport":      moyenTransport,
+            "categoriesAcceptees": cats,
+            "etapes":              etapesData,
+            "statut":              "ouvert"
+        ]
+        if let prix = Double(prixParKg) { body["prixParKg"] = prix }
+
         do {
-            _ = try await repository.createTrajet(body: [
-                "voyageurId":          userId,
-                "villeDepart":         villeDepart,
-                "villeArrivee":        villeArrivee,
-                "paysDepart":          paysDepart,
-                "paysArrivee":         paysArrivee,
-                "dateDepart":          formatter.string(from: dateDepart),
-                "dateArrivee":         formatter.string(from: dateArrivee),
-                "moyenTransport":      moyenTransport,
-                "poidsDisponible":     Double(poidsDisponible) ?? 0,
-                "poidsRestant":        Double(poidsDisponible) ?? 0,
-                "prixParKg":           Double(prixParKg) ?? 0,
-                "categoriesAcceptees": cats,
-                "etapes":              etapesData,
-                "statut":              "ouvert"
-            ])
+            _ = try await repository.createTrajet(body: body)
             isSuccess = true
         } catch {
             self.error = error.localizedDescription

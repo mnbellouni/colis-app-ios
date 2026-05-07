@@ -14,6 +14,14 @@ class LivraisonRepositoryImpl: LivraisonRepository {
         return try await apiClient.get(url: APIEndpoints.livraison(id: id))
     }
 
+    func getMesLivraisons(role: String) async throws -> [Livraison] {
+        return try await apiClient.get(url: APIEndpoints.mesLivraisons(role: role))
+    }
+
+    func getLivraisonsForTrajet(trajetId: String) async throws -> [Livraison] {
+        return try await apiClient.get(url: APIEndpoints.livraisonsForTrajet(trajetId: trajetId))
+    }
+
     func updateStatut(id: String, statut: String) async throws -> Livraison {
         let userId = keychainStorage.get(forKey: KeychainStorage.Keys.userId) ?? ""
         return try await apiClient.put(

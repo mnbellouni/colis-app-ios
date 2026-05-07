@@ -26,16 +26,13 @@ struct TrajetDetailView: View {
                             label: "Transport",
                             value: trajet.moyenTransport.capitalized
                         )
-                        DetailItem(
-                            icon:  "scalemass",
-                            label: "Poids dispo",
-                            value: "\(String(format: "%.1f", trajet.poidsRestant)) kg"
-                        )
-                        DetailItem(
-                            icon:  "eurosign.circle",
-                            label: "Prix/kg",
-                            value: "\(String(format: "%.2f", trajet.prixParKg)) €"
-                        )
+                        if let prix = trajet.prixParKg {
+                            DetailItem(
+                                icon:  "eurosign.circle",
+                                label: "Prix/kg",
+                                value: "\(String(format: "%.2f", prix)) €"
+                            )
+                        }
                     }
 
                     if !trajet.categoriesAcceptees.isEmpty {
@@ -55,22 +52,24 @@ struct TrajetDetailView: View {
                         .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
                     }
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Estimation de coût")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.appTextSecondary)
+                    if let prixKg = trajet.prixParKg {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Estimation de coût")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.appTextSecondary)
 
-                        HStack(spacing: 0) {
-                            estimationCard(poids: 1, prixKg: trajet.prixParKg)
-                            Divider().frame(height: 50)
-                            estimationCard(poids: 5, prixKg: trajet.prixParKg)
-                            Divider().frame(height: 50)
-                            estimationCard(poids: 10, prixKg: trajet.prixParKg)
+                            HStack(spacing: 0) {
+                                estimationCard(poids: 1, prixKg: prixKg)
+                                Divider().frame(height: 50)
+                                estimationCard(poids: 5, prixKg: prixKg)
+                                Divider().frame(height: 50)
+                                estimationCard(poids: 10, prixKg: prixKg)
+                            }
+                            .padding(.vertical, 12)
+                            .background(Color.appCard)
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
                         }
-                        .padding(.vertical, 12)
-                        .background(Color.appCard)
-                        .cornerRadius(12)
-                        .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
                     }
 
                     VStack(alignment: .leading, spacing: 12) {

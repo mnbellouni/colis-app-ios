@@ -34,7 +34,7 @@ struct ColisCodeView: View {
 
                     infoRow(icon: "shippingbox",    label: "Titre",     value: tracking.titre)
                     infoRow(icon: "scalemass",      label: "Poids",     value: "\(String(format: "%.1f", tracking.poids)) kg")
-                    infoRow(icon: "tag",            label: "Catégorie", value: tracking.categorie.capitalized)
+                    infoRow(icon: "tag",            label: "Catégorie", value: (tracking.categories.first ?? "").capitalized)
 
                     Divider()
 

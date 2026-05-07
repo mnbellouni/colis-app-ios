@@ -11,7 +11,12 @@ protocol AppFactory {
     func makeProfileViewModel()         -> ProfileViewModel
     func makeLivraisonViewModel()       -> LivraisonViewModel
     func makeTrajetViewModel()          -> TrajetViewModel
+    func makeAnnonceRepository()        -> any AnnonceRepository
     func makeTrackingRepository()       -> any TrackingRepository
+    func makeTrajetRepository()         -> any TrajetRepository
+    func makePaysRepository()           -> any PaysRepository
+    func makeLivraisonRepository()      -> any LivraisonRepository
+    func makeFavorisRepository()        -> any FavorisRepository
 }
 
 final class ProductionAppFactory: AppFactory {
@@ -39,7 +44,7 @@ final class ProductionAppFactory: AppFactory {
         AuthRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
     }
 
-    private func makeAnnonceRepository() -> any AnnonceRepository {
+    func makeAnnonceRepository() -> any AnnonceRepository {
         AnnonceRepositoryImpl(apiClient: apiClient)
     }
 
@@ -55,10 +60,6 @@ final class ProductionAppFactory: AppFactory {
         TransactionRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
     }
 
-    private func makeLivraisonRepository() -> any LivraisonRepository {
-        LivraisonRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
-    }
-
     private func makeUserRepository() -> any UserRepository {
         UserRepositoryImpl(apiClient: apiClient)
     }
@@ -67,8 +68,20 @@ final class ProductionAppFactory: AppFactory {
         BoostRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
     }
     
-    private func makeTrajetRepository() -> any TrajetRepository {
+    func makeTrajetRepository() -> any TrajetRepository {
         TrajetRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
+    }
+
+    func makePaysRepository() -> any PaysRepository {
+        PaysRepositoryImpl(apiClient: apiClient)
+    }
+
+    func makeLivraisonRepository() -> any LivraisonRepository {
+        LivraisonRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
+    }
+
+    func makeFavorisRepository() -> any FavorisRepository {
+        FavorisRepositoryImpl(apiClient: apiClient)
     }
 
     func makeTrackingRepository() -> any TrackingRepository {
@@ -84,18 +97,19 @@ final class ProductionAppFactory: AppFactory {
     }
 
     func makeHomeViewModel() -> HomeViewModel {
-        HomeViewModel(repository: makeAnnonceRepository())
+        HomeViewModel(repository: makeAnnonceRepository(), favorisRepository: makeFavorisRepository())
     }
 
     func makeAnnonceDetailViewModel() -> AnnonceDetailViewModel {
         AnnonceDetailViewModel(
-            annonceRepository: makeAnnonceRepository(),
-            offreRepository:   makeOffreRepository()
+            annonceRepository:  makeAnnonceRepository(),
+            offreRepository:    makeOffreRepository(),
+            favorisRepository:  makeFavorisRepository()
         )
     }
 
     func makeCreateAnnonceViewModel() -> CreateAnnonceViewModel {
-        CreateAnnonceViewModel(repository: makeAnnonceRepository())
+        CreateAnnonceViewModel(repository: makeAnnonceRepository(), trajetRepository: makeTrajetRepository())
     }
 
     func makeConversationsViewModel() -> ConversationsViewModel {

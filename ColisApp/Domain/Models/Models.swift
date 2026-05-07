@@ -1,11 +1,3 @@
-//
-//  User.swift
-//  ColisApp
-//
-//  Created by Nadjib Bellouni on 26/04/2026.
-//
-
-
 import Foundation
 
 // ── User ──────────────────────────────────────────────────
@@ -17,21 +9,18 @@ struct User: Codable, Identifiable {
     let telephone: String
     let photo: String
     let bio: String
-    let typeCompte: String
+    let typeAbonnement: String?
     let noteVoyageur: Double
     let noteExpediteur: Double
     let nbLivraisons: Double
     let verified: Bool
     let actif: Bool
     let certificationStatus: String
-    let premium: Bool
-    let typeAbonnement: String?
     let createdAt: String
 
     var abonnement: String { typeAbonnement ?? "standard" }
     var isPro: Bool { abonnement == "pro" }
-    var isPremium: Bool { abonnement == "premium" || premium }
-
+    var isPremium: Bool { abonnement == "premium" }
     var nomComplet: String { "\(prenom) \(nom)" }
 }
 
@@ -46,16 +35,22 @@ struct AuthResponse: Codable {
     let email: String
 }
 
+// ── Pays ──────────────────────────────────────────────────
+struct Pays: Codable, Identifiable {
+    let code: String
+    let nom: String
+    var id: String { code }
+}
+
 // ── Annonce ───────────────────────────────────────────────
-struct Annonce: Codable, Identifiable {
+struct Annonce: Identifiable {
     let id: String
     let type: String
     let demandeurId: String
     let titre: String
     let description: String
     let photos: [String]
-    let categorie: String
-    let sousCategorie: String
+    let categories: [String]
     let tags: [String]
     let priorite: String
     let poids: Double
@@ -71,9 +66,13 @@ struct Annonce: Codable, Identifiable {
     let paysDepart: String
     let villeDepart: String
     let adresseDepart: String
+    let nomExpediteur: String?
+    let prenomExpediteur: String?
     let paysArrivee: String?
     let villeArrivee: String?
     let adresseArrivee: String?
+    let nomDestinataire: String?
+    let prenomDestinataire: String?
     let paysSource: String?
     let achat: Achat?
     let createdAt: String
@@ -84,6 +83,101 @@ struct Annonce: Codable, Identifiable {
     var isUrgent: Bool { tags.contains("urgent") || tags.contains("tres_urgent") }
     var isBoosted: Bool { boost }
     var isActive: Bool { actif ?? true }
+}
+
+extension Annonce: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, type, demandeurId, titre, description, photos
+        case categories, categorie
+        case tags, priorite, poids, fragile, budgetTransport, devise
+        case dateLimite, statut, actif, avecCodeSuivi, boost, nbOffres
+        case paysDepart, villeDepart, adresseDepart
+        case nomExpediteur, prenomExpediteur
+        case paysArrivee, villeArrivee, adresseArrivee
+        case nomDestinataire, prenomDestinataire
+        case paysSource, achat, createdAt, updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id            = try c.decode(String.self, forKey: .id)
+        type          = try c.decode(String.self, forKey: .type)
+        demandeurId   = try c.decode(String.self, forKey: .demandeurId)
+        titre         = try c.decode(String.self, forKey: .titre)
+        description   = (try? c.decodeIfPresent(String.self, forKey: .description)) ?? ""
+        photos        = (try? c.decodeIfPresent([String].self, forKey: .photos)) ?? []
+        // Rétrocompatibilité : anciens docs ont 'categorie' (String), nouveaux 'categories' ([String])
+        if let cats = try? c.decodeIfPresent([String].self, forKey: .categories), !cats.isEmpty {
+            categories = cats
+        } else if let cat = try? c.decodeIfPresent(String.self, forKey: .categorie), !cat.isEmpty {
+            categories = [cat]
+        } else {
+            categories = []
+        }
+        tags          = (try? c.decodeIfPresent([String].self, forKey: .tags)) ?? []
+        priorite      = (try? c.decodeIfPresent(String.self, forKey: .priorite)) ?? "normale"
+        poids         = (try? c.decodeIfPresent(Double.self, forKey: .poids)) ?? 0
+        fragile       = (try? c.decodeIfPresent(Bool.self, forKey: .fragile)) ?? false
+        budgetTransport = (try? c.decodeIfPresent(Double.self, forKey: .budgetTransport)) ?? 0
+        devise        = (try? c.decodeIfPresent(String.self, forKey: .devise)) ?? "EUR"
+        dateLimite    = (try? c.decodeIfPresent(String.self, forKey: .dateLimite)) ?? ""
+        statut        = (try? c.decodeIfPresent(String.self, forKey: .statut)) ?? "ouverte"
+        actif         = try? c.decodeIfPresent(Bool.self, forKey: .actif)
+        avecCodeSuivi = try? c.decodeIfPresent(Bool.self, forKey: .avecCodeSuivi)
+        boost         = (try? c.decodeIfPresent(Bool.self, forKey: .boost)) ?? false
+        nbOffres      = (try? c.decodeIfPresent(Double.self, forKey: .nbOffres)) ?? 0
+        paysDepart    = (try? c.decodeIfPresent(String.self, forKey: .paysDepart)) ?? ""
+        villeDepart   = (try? c.decodeIfPresent(String.self, forKey: .villeDepart)) ?? ""
+        adresseDepart = (try? c.decodeIfPresent(String.self, forKey: .adresseDepart)) ?? ""
+        nomExpediteur    = try? c.decodeIfPresent(String.self, forKey: .nomExpediteur)
+        prenomExpediteur = try? c.decodeIfPresent(String.self, forKey: .prenomExpediteur)
+        paysArrivee      = try? c.decodeIfPresent(String.self, forKey: .paysArrivee)
+        villeArrivee     = try? c.decodeIfPresent(String.self, forKey: .villeArrivee)
+        adresseArrivee   = try? c.decodeIfPresent(String.self, forKey: .adresseArrivee)
+        nomDestinataire  = try? c.decodeIfPresent(String.self, forKey: .nomDestinataire)
+        prenomDestinataire = try? c.decodeIfPresent(String.self, forKey: .prenomDestinataire)
+        paysSource    = try? c.decodeIfPresent(String.self, forKey: .paysSource)
+        achat         = try? c.decodeIfPresent(Achat.self, forKey: .achat)
+        createdAt     = (try? c.decodeIfPresent(String.self, forKey: .createdAt)) ?? ""
+        updatedAt     = (try? c.decodeIfPresent(String.self, forKey: .updatedAt)) ?? ""
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id,               forKey: .id)
+        try c.encode(type,             forKey: .type)
+        try c.encode(demandeurId,      forKey: .demandeurId)
+        try c.encode(titre,            forKey: .titre)
+        try c.encode(description,      forKey: .description)
+        try c.encode(photos,           forKey: .photos)
+        try c.encode(categories,       forKey: .categories)
+        try c.encode(tags,             forKey: .tags)
+        try c.encode(priorite,         forKey: .priorite)
+        try c.encode(poids,            forKey: .poids)
+        try c.encode(fragile,          forKey: .fragile)
+        try c.encode(budgetTransport,  forKey: .budgetTransport)
+        try c.encode(devise,           forKey: .devise)
+        try c.encode(dateLimite,       forKey: .dateLimite)
+        try c.encode(statut,           forKey: .statut)
+        try c.encodeIfPresent(actif,             forKey: .actif)
+        try c.encodeIfPresent(avecCodeSuivi,     forKey: .avecCodeSuivi)
+        try c.encode(boost,            forKey: .boost)
+        try c.encode(nbOffres,         forKey: .nbOffres)
+        try c.encode(paysDepart,       forKey: .paysDepart)
+        try c.encode(villeDepart,      forKey: .villeDepart)
+        try c.encode(adresseDepart,    forKey: .adresseDepart)
+        try c.encodeIfPresent(nomExpediteur,     forKey: .nomExpediteur)
+        try c.encodeIfPresent(prenomExpediteur,  forKey: .prenomExpediteur)
+        try c.encodeIfPresent(paysArrivee,       forKey: .paysArrivee)
+        try c.encodeIfPresent(villeArrivee,      forKey: .villeArrivee)
+        try c.encodeIfPresent(adresseArrivee,    forKey: .adresseArrivee)
+        try c.encodeIfPresent(nomDestinataire,   forKey: .nomDestinataire)
+        try c.encodeIfPresent(prenomDestinataire,forKey: .prenomDestinataire)
+        try c.encodeIfPresent(paysSource,        forKey: .paysSource)
+        try c.encodeIfPresent(achat,             forKey: .achat)
+        try c.encode(createdAt,        forKey: .createdAt)
+        try c.encode(updatedAt,        forKey: .updatedAt)
+    }
 }
 
 struct Achat: Codable {
@@ -100,6 +194,7 @@ struct Offre: Codable, Identifiable {
     let id: String
     let annonceId: String
     let voyageurId: String
+    let trajetId: String?
     let message: String
     let fraisService: Double
     let villeDepart: String
@@ -141,6 +236,7 @@ struct Livraison: Codable, Identifiable {
     let annonceId: String
     let voyageurId: String
     let expediteurId: String
+    let trajetId: String?
     let statut: String
     let etapes: [Etape]
     let createdAt: String
@@ -219,7 +315,7 @@ struct ColisTracking: Codable {
     let paysDepart: String
     let paysArrivee: String
     let poids: Double
-    let categorie: String
+    let categories: [String]
     let statut: String
     let etapes: [Etape]
     let expediteurId: String
@@ -242,14 +338,19 @@ struct Tags: Codable {
     }
 }
 
-// ── Trajet ──────────────────────────────────────────────────
-
+// ── Trajet ────────────────────────────────────────────────
 struct EtapeTrajet: Codable, Identifiable {
     var id: String { "\(ville)-\(pays)" }
     let ville: String
     let adresse: String?
     let pays: String
     let dateDepart: String?
+}
+
+struct PrixPalier: Codable {
+    let poidsMin: Double
+    let poidsMax: Double
+    let prix: Double
 }
 
 struct Trajet: Codable, Identifiable {
@@ -262,9 +363,8 @@ struct Trajet: Codable, Identifiable {
     let dateDepart: String
     let dateArrivee: String
     let moyenTransport: String
-    let poidsDisponible: Double
-    let poidsRestant: Double
-    let prixParKg: Double
+    let prixParKg: Double?
+    let prixPaliers: [PrixPalier]?
     let categoriesAcceptees: [String]
     let etapes: [EtapeTrajet]?
     let statut: String

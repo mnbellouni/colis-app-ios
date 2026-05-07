@@ -13,13 +13,26 @@ class AnnonceRepositoryImpl: AnnonceRepository {
         categorie: String? = nil,
         paysSource: String? = nil
     ) async throws -> [Annonce] {
+        var p: [String: String] = [:]
+        if let type      = type      { p["type"]       = type }
+        if let categorie = categorie { p["categorie"]  = categorie }
+        if let pays      = paysSource { p["paysSource"] = pays }
+        return try await getAnnonces(params: p)
+    }
+
+    func getAnnonces(params: [String: String]) async throws -> [Annonce] {
         var url = APIEndpoints.annonces
-        var params: [String] = []
-        if let type      = type      { params.append("type=\(type)") }
-        if let categorie = categorie { params.append("categorie=\(categorie)") }
-        if let pays      = paysSource { params.append("paysSource=\(pays)") }
-        if !params.isEmpty { url += "?" + params.joined(separator: "&") }
+        if !params.isEmpty {
+            let qs = params.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }
+                .joined(separator: "&")
+            url += "?" + qs
+        }
         return try await apiClient.get(url: url, requiresAuth: false)
+    }
+
+    func getMesAnnonces(demandeurId: String) async throws -> [Annonce] {
+        let url = "\(APIEndpoints.annonces)?demandeurId=\(demandeurId)"
+        return try await apiClient.get(url: url)
     }
 
     func getAnnonce(id: String) async throws -> Annonce {
@@ -36,6 +49,10 @@ class AnnonceRepositoryImpl: AnnonceRepository {
 
     func deleteAnnonce(id: String) async throws {
         let _: [String: String] = try await apiClient.delete(url: APIEndpoints.annonce(id: id))
+    }
+
+    func toggleActif(id: String) async throws -> Annonce {
+        return try await apiClient.put(url: "\(APIEndpoints.annonce(id: id))/actif", body: [:])
     }
 
     func getUploadUrl(annonceId: String, contentType: String) async throws -> [String: String] {

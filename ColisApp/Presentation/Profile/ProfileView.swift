@@ -7,9 +7,10 @@ struct ProfileView: View {
 
     @StateObject private var vmHolder = VMHolder<ProfileViewModel>()
     private var vm: ProfileViewModel? { vmHolder.vm }
-    @State private var showEdit = false
-    @State private var showCertification = false
-    @State private var certificationStatus = "non_soumis"
+
+    @State private var showEdit           = false
+    @State private var showCertification  = false
+    @State private var certificationStatus      = "non_soumis"
     @State private var certificationRejectionReason = ""
 
     var body: some View {
@@ -17,15 +18,20 @@ struct ProfileView: View {
             ScrollView {
                 VStack(spacing: 0) {
 
-                    // ── Avatar + Identité ─────────────────
+                    // ── En-tête profil ────────────────────
                     VStack(spacing: 14) {
                         ZStack(alignment: .bottomTrailing) {
-                            AvatarView(seed: "\(authState.userPrenom ?? "")\(authState.userNom ?? "")", size: 80)
-                            ZStack {
-                                Circle().fill(Color.appCard).frame(width: 26, height: 26)
-                                Image(systemName: "checkmark.seal.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundColor(.appPrimary)
+                            AvatarView(
+                                seed: "\(authState.userPrenom ?? "")\(authState.userNom ?? "")",
+                                size: 80
+                            )
+                            Button { showEdit = true } label: {
+                                ZStack {
+                                    Circle().fill(Color.appCard).frame(width: 28, height: 28)
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.appPrimary)
+                                }
                             }
                             .offset(x: 4, y: 4)
                         }
@@ -36,84 +42,56 @@ struct ProfileView: View {
                                 .foregroundColor(.appTextPrimary)
 
                             if let user = vm?.user {
-                                Text(user.email)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.appTextSecondary)
+                                HStack(spacing: 6) {
+                                    Image(systemName: "star.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(Color(hex: "F59E0B"))
+                                    Text(String(format: "%.1f", user.noteVoyageur))
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.appTextPrimary)
+                                    Text("· \(Int(user.nbLivraisons)) livraisons")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.appTextSecondary)
+                                }
                             }
 
+                            // Badges abonnement + certification
                             HStack(spacing: 8) {
-                                Text(certificationStatusLabel)
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(certificationStatusColor)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(certificationStatusBackground)
-                                    .cornerRadius(99)
-                                if let user = vm?.user, !user.typeCompte.isEmpty {
-                                    Text(user.typeCompte.capitalized)
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(.appTextSecondary)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 4)
-                                        .background(Color.appCanvas)
+                                if let user = vm?.user, user.abonnement != "standard" {
+                                    Text(user.abonnement == "pro" ? "PRO" : "Premium")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 10).padding(.vertical, 4)
+                                        .background(Color.appPrimary)
                                         .cornerRadius(99)
                                 }
+
+                                HStack(spacing: 4) {
+                                    Image(systemName: certificationIconName)
+                                        .font(.system(size: 12))
+                                    Text(certificationLabel)
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .foregroundColor(certificationColor)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background(certificationBackground)
+                                .cornerRadius(99)
                             }
                         }
                     }
                     .padding(.top, 28)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 24)
 
-                    // ── Stats ─────────────────────────────
-                    if let user = vm?.user {
-                        HStack(spacing: 0) {
-                            StatCard(value: "\(Int(user.nbLivraisons))", label: "Tous")
-                            Divider().frame(height: 36)
-                            StatCard(
-                                value: String(format: "%.1f", user.noteExpediteur),
-                                label: "Expéditeur",
-                                icon: "star.fill"
-                            )
-                            Divider().frame(height: 36)
-                            StatCard(
-                                value: String(format: "%.1f", user.noteVoyageur),
-                                label: "Voyageur",
-                                icon: "star.fill"
-                            )
-                        }
-                        .padding(.vertical, 16)
-                        .background(Color.appCard)
-                        .cornerRadius(16)
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appBorder, lineWidth: 1))
-                        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        .padding(.horizontal, 18)
-                        .padding(.bottom, 24)
-                    }
+                    // ── MON ACTIVITÉ ──────────────────────
+                    SectionHeader(title: "MON ACTIVITÉ")
 
-                    // ── Menu ──────────────────────────────
                     VStack(spacing: 1) {
-                        ProfileMenuItem(
-                            icon: "pencil.circle.fill", iconColor: .appPrimary,
-                            label: "Modifier le profil", subtitle: "Nom, photo, bio"
-                        ) { showEdit = true }
-
                         NavigationLink {
-                            MesLivraisonsView()
+                            MesAnnoncesView()
                         } label: {
                             ProfileMenuRow(
-                                icon: "shippingbox.fill", iconColor: .appInfo,
-                                label: "Mes livraisons", subtitle: "Historique complet"
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        NavigationLink {
-                            SuiviColisView()
-                                .navigationBarHidden(false)
-                        } label: {
-                            ProfileMenuRow(
-                                icon: "qrcode", iconColor: Color(hex: "8B5CF6"),
-                                label: "Mes codes de suivi", subtitle: "Codes actifs"
+                                icon: "megaphone.fill", iconColor: .appPrimary,
+                                label: "Mes annonces", subtitle: "Gérer mes annonces publiées"
                             )
                         }
                         .buttonStyle(.plain)
@@ -128,33 +106,50 @@ struct ProfileView: View {
                         }
                         .buttonStyle(.plain)
 
+                        NavigationLink {
+                            MesLivraisonsView()
+                        } label: {
+                            ProfileMenuRow(
+                                icon: "shippingbox.fill", iconColor: Color(hex: "F59E0B"),
+                                label: "Mes livraisons", subtitle: "Suivre mes colis expédiés"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .background(Color.appCard)
+                    .cornerRadius(16)
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appBorder, lineWidth: 1))
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 16)
+
+                    // ── MON COMPTE ────────────────────────
+                    SectionHeader(title: "MON COMPTE")
+
+                    VStack(spacing: 1) {
                         ProfileMenuItem(
                             icon: "checkmark.shield.fill",
-                            iconColor: certificationStatusColor,
+                            iconColor: certificationColor,
                             label: certificationMenuTitle,
-                            subtitle: certificationMenuSubtitle
+                            subtitle: certificationMenuSubtitle,
+                            badge: certificationIconName
                         ) {
                             showCertification = true
                         }
 
-                        ProfileMenuItem(
-                            icon: "star.fill", iconColor: Color(hex: "F59E0B"),
-                            label: "Évaluations", subtitle: "\(vm?.evaluations?.total ?? 0) avis"
-                        ) { }
-
-                        ProfileMenuItem(
-                            icon: "creditcard.fill", iconColor: .appAccent,
-                            label: "Paiements & sécurité", subtitle: "Moyens de paiement"
-                        ) { }
-
-                        ProfileMenuItem(
-                            icon: "bell.fill", iconColor: .appWarning,
-                            label: "Notifications", subtitle: "Gérer les alertes"
-                        ) { }
+                        NavigationLink {
+                            AbonnementView()
+                        } label: {
+                            ProfileMenuRow(
+                                icon: "creditcard.fill", iconColor: .appAccent,
+                                label: "Mon abonnement",
+                                subtitle: abonnementSubtitle
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                     .background(Color.appCard)
-                    .cornerRadius(26)
-                    .overlay(RoundedRectangle(cornerRadius: 26).stroke(Color.appBorder, lineWidth: 1))
+                    .cornerRadius(16)
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appBorder, lineWidth: 1))
                     .padding(.horizontal, 18)
                     .padding(.bottom, 16)
 
@@ -187,9 +182,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showCertification) {
                 CertificationFlowView(
-                    accountNom: vm?.user?.nom ?? authState.userNom ?? "",
+                    accountNom:    vm?.user?.nom ?? authState.userNom ?? "",
                     accountPrenom: vm?.user?.prenom ?? authState.userPrenom ?? "",
-                    source: "Profil",
+                    source:        "Profil",
                     isAlreadyVerified: vm?.user?.verified ?? false
                 )
             }
@@ -198,9 +193,7 @@ struct ProfileView: View {
                 await loadCertificationStatus()
             }
             .onChange(of: showCertification) { isPresented in
-                if !isPresented {
-                    Task { await loadCertificationStatus() }
-                }
+                if !isPresented { Task { await loadCertificationStatus() } }
             }
         }
         .task {
@@ -210,68 +203,82 @@ struct ProfileView: View {
         }
     }
 
-    private var certificationStatusLabel: String {
-        switch normalizedCertificationStatus {
-        case "verifie", "verified": return "Vérifié"
-        case "pending": return "En attente"
-        case "rejete", "rejected": return "Refusé"
-        default: return "Non vérifié"
-        }
-    }
+    // ── Helpers certification ─────────────────────────────
 
-    private var certificationStatusColor: Color {
-        switch normalizedCertificationStatus {
-        case "verifie", "verified": return .appSuccess
-        case "pending": return .appPrimary
-        case "rejete", "rejected": return .appError
-        default: return .appWarning
-        }
-    }
-
-    private var certificationStatusBackground: Color {
-        switch normalizedCertificationStatus {
-        case "verifie", "verified": return .appSuccessLight
-        case "pending": return .appPrimaryLight
-        case "rejete", "rejected": return .appErrorLight
-        default: return .appWarningLight
-        }
-    }
-
-    private var certificationMenuTitle: String {
-        switch normalizedCertificationStatus {
-        case "verifie", "verified": return "Vérification validée"
-        case "pending": return "Vérification en attente"
-        case "rejete", "rejected": return "Vérification refusée"
-        default: return "Vérifier mon identité"
-        }
-    }
-
-    private var certificationMenuSubtitle: String {
-        switch normalizedCertificationStatus {
-        case "verifie", "verified": return "Compte certifié"
-        case "pending": return "Dossier en cours de revue"
-        case "rejete", "rejected":
-            return certificationRejectionReason.isEmpty
-                ? "Motif requis pour relancer"
-                : certificationRejectionReason
-        default: return "Documents d'identité requis"
-        }
-    }
-
-    private var normalizedCertificationStatus: String {
+    private var normalizedStatus: String {
         certificationStatus
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .folding(options: .diacriticInsensitive, locale: .current)
             .lowercased()
     }
 
+    private var certificationLabel: String {
+        switch normalizedStatus {
+        case "verifie", "verified": return "Certifié"
+        case "pending":             return "En attente"
+        case "rejete", "rejected":  return "Refusé"
+        default:                    return "Non certifié"
+        }
+    }
+
+    private var certificationIconName: String {
+        switch normalizedStatus {
+        case "verifie", "verified": return "checkmark.seal.fill"
+        case "pending":             return "hourglass"
+        default:                    return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var certificationColor: Color {
+        switch normalizedStatus {
+        case "verifie", "verified": return .appSuccess
+        case "pending":             return .appWarning
+        default:                    return .appError
+        }
+    }
+
+    private var certificationBackground: Color {
+        switch normalizedStatus {
+        case "verifie", "verified": return .appSuccessLight
+        case "pending":             return .appWarningLight
+        default:                    return .appErrorLight
+        }
+    }
+
+    private var certificationMenuTitle: String {
+        switch normalizedStatus {
+        case "verifie", "verified": return "Vérification validée"
+        case "pending":             return "Vérification en attente"
+        case "rejete", "rejected":  return "Vérification refusée"
+        default:                    return "Vérifier mon identité"
+        }
+    }
+
+    private var certificationMenuSubtitle: String {
+        switch normalizedStatus {
+        case "verifie", "verified": return "Compte certifié"
+        case "pending":             return "Dossier en cours de revue"
+        case "rejete", "rejected":  return certificationRejectionReason.isEmpty
+            ? "Motif requis pour relancer"
+            : certificationRejectionReason
+        default:                    return "Documents d'identité requis"
+        }
+    }
+
+    private var abonnementSubtitle: String {
+        guard let user = vm?.user else { return "Standard" }
+        switch user.abonnement {
+        case "premium": return "Premium · 9,99 €/mois"
+        case "pro":     return "PRO · 29,99 €/mois"
+        default:        return "Standard · Gratuit"
+        }
+    }
+
     private func loadCertificationStatus() async {
         guard authState.isLoggedIn,
               let userId = authState.userId,
-              let token = KeychainStorage().get(forKey: KeychainStorage.Keys.accessToken),
-              let url = URL(string: APIEndpoints.userCertification(id: userId)) else {
-            return
-        }
+              let token  = KeychainStorage().get(forKey: KeychainStorage.Keys.accessToken),
+              let url    = URL(string: APIEndpoints.userCertification(id: userId)) else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
@@ -279,52 +286,35 @@ struct ProfileView: View {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            guard (200...299).contains(code),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                return
-            }
-
-            certificationStatus = (json["certificationStatus"] as? String) ?? "non_soumis"
+            guard (200...299).contains((response as? HTTPURLResponse)?.statusCode ?? 0),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else { return }
+            certificationStatus          = (json["certificationStatus"] as? String) ?? "non_soumis"
             certificationRejectionReason = (json["certificationRejectionReason"] as? String) ?? ""
-        } catch {
-            // Keep previous status on transient network errors.
-        }
+        } catch {}
     }
 }
 
-// ── Stat Card ─────────────────────────────────────────────
-struct StatCard: View {
-    let value: String
-    let label: String
-    var icon: String? = nil
-
+// ── Section header ────────────────────────────────────────
+struct SectionHeader: View {
+    let title: String
     var body: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 4) {
-                Text(value)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.appTextPrimary)
-                if let icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 12))
-                        .foregroundColor(Color(hex: "F59E0B"))
-                }
-            }
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundColor(.appTextSecondary)
-        }
-        .frame(maxWidth: .infinity)
+        Text(title)
+            .font(.system(size: 11, weight: .bold))
+            .foregroundColor(.appTextTertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 22)
+            .padding(.bottom, 6)
     }
 }
 
-// ── Menu Item ─────────────────────────────────────────────
+// ── Menu item avec badge optionnel ────────────────────────
 struct ProfileMenuItem: View {
     let icon:      String
     let iconColor: Color
     let label:     String
     let subtitle:  String
+    var badge:     String? = nil
     let action:    () -> Void
 
     var body: some View {
@@ -366,31 +356,6 @@ struct ProfileMenuRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-    }
-}
-
-// ── Evaluation Row ────────────────────────────────────────
-struct EvaluationRow: View {
-    let evaluation: Evaluation
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                HStack(spacing: 2) {
-                    ForEach(0..<evaluation.note, id: \.self) { _ in
-                        Image(systemName: "star.fill").font(.system(size: 11)).foregroundColor(Color(hex: "F59E0B"))
-                    }
-                }
-                Spacer()
-                Text(String(evaluation.createdAt.prefix(10))).font(.system(size: 12)).foregroundColor(.appTextTertiary)
-            }
-            if !evaluation.commentaire.isEmpty {
-                Text(evaluation.commentaire).font(.system(size: 14)).foregroundColor(.appTextSecondary)
-            }
-        }
-        .padding(12)
-        .background(Color.appCanvas)
-        .cornerRadius(10)
     }
 }
 
@@ -441,275 +406,48 @@ struct EditProfileView: View {
     }
 }
 
-// ── Certification Flow ───────────────────────────────────
-struct CertificationFlowView: View {
-
-    @Environment(\.dismiss)        private var dismiss
+// ── Placeholder Abonnement ────────────────────────────────
+struct AbonnementView: View {
     @EnvironmentObject private var authState: AuthState
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                EmptyStateView(
+                    icon: "creditcard",
+                    title: "Mon abonnement",
+                    message: "Gérez votre plan depuis cette section."
+                )
+            }
+            .padding(20)
+        }
+        .background(Color.appBackground)
+        .navigationTitle("Mon abonnement")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
 
-    let accountNom: String
-    let accountPrenom: String
-    let source: String
-    var isAlreadyVerified: Bool = false
-    var onDone: (() -> Void)? = nil
-
-    @State private var docType = "Carte d'identité"
-    @State private var documentNumber = ""
-    @State private var documentFrontRef = ""
-    @State private var documentBackRef = ""
-    @State private var firstNameOnDocument = ""
-    @State private var lastNameOnDocument = ""
-    @State private var submitted = false
-    @State private var error: String? = nil
-    @State private var certificationStatus = "non_soumis"
-    @State private var rejectionReason = ""
-
-    private let documentTypes = ["Carte d'identité", "Passeport", "Titre de séjour"]
+// ── Stat Card (utilisée dans d'autres vues) ───────────────
+struct StatCard: View {
+    let value: String
+    let label: String
+    var icon:  String? = nil
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    Text("Certification d'identité")
-                        .font(.system(size: 22, weight: .bold))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Text("Origine: \(source)")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.appTextSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    if normalizedCertificationStatus == "verifie" || normalizedCertificationStatus == "verified" || isAlreadyVerified {
-                        Label("Votre compte est déjà certifié", systemImage: "checkmark.seal.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.appSuccess)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .background(Color.appSuccessLight)
-                            .cornerRadius(12)
-                    } else if normalizedCertificationStatus == "pending" {
-                        Label("Votre dossier est en attente de validation admin", systemImage: "hourglass")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.appPrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .background(Color.appPrimaryLight)
-                            .cornerRadius(12)
-                    } else {
-                        if normalizedCertificationStatus == "rejete" || normalizedCertificationStatus == "rejected" {
-                            Label(
-                                rejectionReason.isEmpty
-                                    ? "Dossier refusé. Merci de corriger et renvoyer."
-                                    : "Dossier refusé : \(rejectionReason)",
-                                systemImage: "xmark.seal"
-                            )
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.appError)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .background(Color.appErrorLight)
-                            .cornerRadius(12)
-                        }
-
-                        if !authState.isLoggedIn || authState.userId == nil {
-                            Text("Connectez-vous pour soumettre vos documents. Vous pourrez reprendre ce parcours depuis Profil ou Trajets.")
-                                .font(.system(size: 13))
-                                .foregroundColor(.appTextSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(12)
-                                .background(Color.appWarningLight)
-                                .cornerRadius(12)
-                        }
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Type de document")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.appTextSecondary)
-                            Picker("", selection: $docType) {
-                                ForEach(documentTypes, id: \.self) { type in
-                                    Text(type).tag(type)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                        }
-
-                        AppTextField(
-                            title: "Numéro du document",
-                            placeholder: "AB123456",
-                            text: $documentNumber
-                        )
-
-                        AppTextField(
-                            title: "Référence document recto",
-                            placeholder: "Nom du fichier ou identifiant",
-                            text: $documentFrontRef
-                        )
-
-                        AppTextField(
-                            title: "Référence document verso",
-                            placeholder: "Nom du fichier ou identifiant",
-                            text: $documentBackRef
-                        )
-
-                        AppTextField(
-                            title: "Prénom sur le document",
-                            placeholder: accountPrenom,
-                            text: $firstNameOnDocument
-                        )
-
-                        AppTextField(
-                            title: "Nom sur le document",
-                            placeholder: accountNom,
-                            text: $lastNameOnDocument
-                        )
-
-                        if let error {
-                            ErrorBanner(message: error)
-                        }
-
-                        if submitted {
-                            Label("Dossier de certification enregistré. Vous serez notifié après vérification.", systemImage: "hourglass")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.appPrimary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(12)
-                                .background(Color.appPrimaryLight)
-                                .cornerRadius(12)
-                        }
-
-                        AppButton(title: "Soumettre mon dossier") {
-                            Task {
-                                await submitCertification()
-                            }
-                        }
-                    }
-
-                    AppButton(title: "Terminer", action: {
-                        dismiss()
-                        onDone?()
-                    }, style: .secondary)
+        VStack(spacing: 4) {
+            HStack(spacing: 4) {
+                Text(value)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.appTextPrimary)
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "F59E0B"))
                 }
-                .padding(18)
             }
-            .background(Color.appBackground)
-            .navigationTitle("Certification")
-            .navigationBarTitleDisplayMode(.inline)
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundColor(.appTextSecondary)
         }
-        .onAppear {
-            firstNameOnDocument = accountPrenom
-            lastNameOnDocument = accountNom
-        }
-        .task {
-            await loadCertificationStatus()
-        }
-    }
-
-    private func submitCertification() async {
-        error = nil
-        submitted = false
-
-        guard authState.isLoggedIn, let userId = authState.userId else {
-            error = "Connectez-vous pour soumettre vos documents."
-            return
-        }
-
-        guard !documentNumber.isEmpty,
-              !documentFrontRef.isEmpty,
-              !documentBackRef.isEmpty,
-              !firstNameOnDocument.isEmpty,
-              !lastNameOnDocument.isEmpty else {
-            error = "Tous les champs du dossier sont obligatoires."
-            return
-        }
-
-        guard normalize(firstNameOnDocument) == normalize(accountPrenom),
-              normalize(lastNameOnDocument) == normalize(accountNom) else {
-            error = "Le nom/prénom du document doit correspondre au compte."
-            return
-        }
-
-        guard let token = KeychainStorage().get(forKey: KeychainStorage.Keys.accessToken) else {
-            error = "Session expirée. Veuillez vous reconnecter."
-            return
-        }
-
-        guard let url = URL(string: APIEndpoints.userCertification(id: userId)) else {
-            error = "URL de certification invalide."
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        let payload: [String: String] = [
-            "documentType": docType,
-            "documentNumber": documentNumber,
-            "documentFrontRef": documentFrontRef,
-            "documentBackRef": documentBackRef,
-            "firstNameOnDocument": firstNameOnDocument,
-            "lastNameOnDocument": lastNameOnDocument,
-        ]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if (200...299).contains(code) {
-                submitted = true
-                await loadCertificationStatus()
-                return
-            }
-
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let backendError = json["erreur"] as? String,
-               !backendError.isEmpty {
-                error = backendError
-            } else {
-                error = "Échec de la soumission du dossier (\(code))."
-            }
-        } catch {
-            self.error = "Impossible d'envoyer le dossier de certification."
-        }
-    }
-
-    private func normalize(_ input: String) -> String {
-        input
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: .diacriticInsensitive, locale: .current)
-            .lowercased()
-    }
-
-    private var normalizedCertificationStatus: String {
-        certificationStatus
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: .diacriticInsensitive, locale: .current)
-            .lowercased()
-    }
-
-    private func loadCertificationStatus() async {
-        guard authState.isLoggedIn,
-              let userId = authState.userId,
-              let token = KeychainStorage().get(forKey: KeychainStorage.Keys.accessToken),
-              let url = URL(string: APIEndpoints.userCertification(id: userId)) else {
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            guard (200...299).contains(code),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                return
-            }
-            certificationStatus = (json["certificationStatus"] as? String) ?? "non_soumis"
-            rejectionReason = (json["certificationRejectionReason"] as? String) ?? ""
-        } catch {
-            // Keep optimistic UI state.
-        }
+        .frame(maxWidth: .infinity)
     }
 }

@@ -179,21 +179,13 @@ struct CreateTrajetView: View {
                         .pickerStyle(.segmented)
                     }
 
-                    // ── Poids et prix ─────────────────────
-                    HStack(spacing: 12) {
-                        AppTextField(
-                            title:        "Poids disponible (kg)",
-                            placeholder:  "10",
-                            text:         $vm.poidsDisponible,
-                            keyboardType: .decimalPad
-                        )
-                        AppTextField(
-                            title:        "Prix/kg (€)",
-                            placeholder:  "2.50",
-                            text:         $vm.prixParKg,
-                            keyboardType: .decimalPad
-                        )
-                    }
+                    // ── Prix ──────────────────────────────
+                    AppTextField(
+                        title:        "Prix/kg (€) — optionnel",
+                        placeholder:  "2.50",
+                        text:         $vm.prixParKg,
+                        keyboardType: .decimalPad
+                    )
 
                     // ── Catégories acceptées ──────────────
                     VStack(alignment: .leading, spacing: 8) {

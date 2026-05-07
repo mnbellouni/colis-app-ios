@@ -256,7 +256,7 @@ struct TrackingResultCard: View {
                 Label("\(String(format: "%.1f", tracking.poids)) kg", systemImage: "scalemass")
                     .font(.system(size: 13))
                     .foregroundColor(.appTextSecondary)
-                Label(tracking.categorie.capitalized, systemImage: "tag")
+                Label((tracking.categories.first ?? "").capitalized, systemImage: "tag")
                     .font(.system(size: 13))
                     .foregroundColor(.appTextSecondary)
             }
