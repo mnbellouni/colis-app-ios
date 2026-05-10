@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct CreateAnnonceView: View {
 
@@ -14,11 +15,14 @@ struct CreateAnnonceView: View {
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hideAnnonceOnboarding")
     @State private var hideOnboardingForever = false
     @State private var showTrajetsCompatibles = false
+    @State private var stepError: String?     = nil
+    @State private var pickerItems: [PhotosPickerItem] = []
+    @State private var selectedPhotos: [UIImage]       = []
 
     let categories = ["vetements", "electronique", "medicament",
                       "documents", "alimentaire", "cosmetique", "cadeau", "autre"]
     let allTags = [
-        "urgent", "tres_urgent", "fragile", "medicament",
+        "urgent", "tres_urgent", "medicament",
         "hospitalisation", "humanitaire", "lourd",
         "encombrant", "perissable", "valeur_elevee"
     ]
@@ -109,7 +113,7 @@ struct CreateAnnonceView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Annuler") { dismiss() }.foregroundColor(.appPrimary)
+                CloseButton { dismiss() }
             }
         }
     }
@@ -146,13 +150,19 @@ struct CreateAnnonceView: View {
                 if let error = vm?.error {
                     ErrorBanner(message: error)
                 }
+                if let error = stepError {
+                    ErrorBanner(message: error)
+                }
 
                 HStack(spacing: 12) {
                     if step > 0 {
-                        AppButton(title: "Retour", action: { step -= 1 }, style: .secondary)
+                        AppButton(title: "Retour", action: { step -= 1; stepError = nil }, style: .secondary)
                     }
                     if step < 3 {
-                        AppButton(title: "Suivant", action: { step += 1 })
+                        AppButton(title: "Suivant", action: {
+                            if let err = validateStep(step) { stepError = err }
+                            else { stepError = nil; step += 1 }
+                        })
                     } else {
                         AppButton(
                             title:     "Publier l'annonce",
@@ -160,6 +170,9 @@ struct CreateAnnonceView: View {
                                 Task {
                                     await vm?.createAnnonce(userId: authState.userId ?? "")
                                     if vm?.error == nil {
+                                        if !selectedPhotos.isEmpty, let annonceId = vm?.annonce?.id {
+                                            await vm?.uploadPhotos(selectedPhotos, annonceId: annonceId)
+                                        }
                                         if vm?.trajetsCompatibles.isEmpty == false {
                                             showTrajetsCompatibles = true
                                         }
@@ -178,11 +191,11 @@ struct CreateAnnonceView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Annuler") { dismiss() }.foregroundColor(.appPrimary)
+                CloseButton { dismiss() }
             }
         }
-        .onChange(of: vm?.isSuccess ?? false) { success in
-            if success { dismiss() }
+        .onChange(of: vm?.isSuccess ?? false) {
+            if vm?.isSuccess == true { dismiss() }
         }
     }
 
@@ -211,6 +224,68 @@ struct CreateAnnonceView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Informations du colis")
                 .font(.system(size: 20, weight: .bold)).foregroundColor(.appTextPrimary)
+
+            // Photos (2 max, JPG/PNG/HEIC, 10 Mo)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Photos (facultatif, 2 max)")
+                    .font(.system(size: 13, weight: .medium)).foregroundColor(.appTextSecondary)
+                HStack(spacing: 12) {
+                    ForEach(0..<2, id: \.self) { slot in
+                        if slot < selectedPhotos.count {
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: selectedPhotos[slot])
+                                    .resizable().scaledToFill()
+                                    .frame(width: 100, height: 100)
+                                    .clipped()
+                                    .cornerRadius(10)
+                                Button {
+                                    selectedPhotos.remove(at: slot)
+                                    if pickerItems.count > slot { pickerItems.remove(at: slot) }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.white)
+                                        .shadow(radius: 2)
+                                }
+                                .offset(x: 6, y: -6)
+                            }
+                        } else {
+                            PhotosPicker(
+                                selection: $pickerItems,
+                                maxSelectionCount: 2,
+                                matching: .images
+                            ) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.appCanvas)
+                                        .frame(width: 100, height: 100)
+                                        .overlay(RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.appBorder, style: StrokeStyle(lineWidth: 1, dash: [4])))
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "camera.fill")
+                                            .font(.system(size: 22)).foregroundColor(.appPrimary)
+                                        Text("Ajouter").font(.system(size: 11)).foregroundColor(.appTextTertiary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer()
+                }
+                .onChange(of: pickerItems) {
+                    Task {
+                        var images: [UIImage] = []
+                        for item in pickerItems.prefix(2) {
+                            if let data = try? await item.loadTransferable(type: Data.self),
+                               data.count <= 10_485_760,
+                               let img = UIImage(data: data) {
+                                images.append(img)
+                            }
+                        }
+                        selectedPhotos = images
+                    }
+                }
+            }
 
             AppTextField(title: "Titre *", placeholder: "Ex: Colis vêtements famille",
                          text: Binding(get: { vm?.titre ?? "" }, set: { vm?.titre = $0 }))
@@ -290,8 +365,8 @@ struct CreateAnnonceView: View {
                 AppTextField(title: "Adresse départ", placeholder: "10 rue de la Paix",
                              text: Binding(get: { vm?.adresseDepart ?? "" }, set: { vm?.adresseDepart = $0 }))
             }
-            .padding(14).background(Color.appCard).cornerRadius(12)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appBorder, lineWidth: 1))
+            .padding(14).background(Color.appCard).cornerRadius(13)
+            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1))
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("Destinataire").font(.system(size: 14, weight: .semibold)).foregroundColor(.appTextSecondary)
@@ -308,8 +383,29 @@ struct CreateAnnonceView: View {
                 AppTextField(title: "Adresse arrivée", placeholder: "5 rue Hassan II",
                              text: Binding(get: { vm?.adresseArrivee ?? "" }, set: { vm?.adresseArrivee = $0 }))
             }
-            .padding(14).background(Color.appCard).cornerRadius(12)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appBorder, lineWidth: 1))
+            .padding(14).background(Color.appCard).cornerRadius(13)
+            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1))
+        }
+    }
+
+    // ── Validation par étape ──────────────────────────────
+    private func validateStep(_ step: Int) -> String? {
+        switch step {
+        case 0:
+            guard vm?.type.isEmpty == false else { return "Choisissez un type d'annonce" }
+            return nil
+        case 1:
+            guard vm?.titre.isEmpty == false else { return "Le titre est obligatoire" }
+            guard vm?.categories.isEmpty == false else { return "Choisissez au moins une catégorie" }
+            guard let poids = vm?.poids, !poids.isEmpty, Double(poids) != nil else { return "Le poids est obligatoire" }
+            guard let budget = vm?.budget, !budget.isEmpty, Double(budget) != nil else { return "Le budget est obligatoire" }
+            return nil
+        case 2:
+            guard vm?.villeDepart.isEmpty == false else { return "La ville de départ est obligatoire" }
+            guard vm?.villeArrivee.isEmpty == false else { return "La ville d'arrivée est obligatoire" }
+            return nil
+        default:
+            return nil
         }
     }
 
@@ -338,7 +434,7 @@ struct CreateAnnonceView: View {
                 }
                 .tint(.appPrimary)
             }
-            .padding(14).background(Color.appPrimaryLight).cornerRadius(12)
+            .padding(14).background(Color.appPrimaryLight).cornerRadius(13)
         }
     }
 }
@@ -445,8 +541,8 @@ struct TrajetSelectableCard: View {
             }
             .padding(14)
             .background(Color.appCard)
-            .cornerRadius(12)
-            .overlay(RoundedRectangle(cornerRadius: 12)
+            .cornerRadius(13)
+            .overlay(RoundedRectangle(cornerRadius: 13)
                 .stroke(selected ? Color.appPrimary : Color.appBorder,
                         lineWidth: selected ? 2 : 1))
         }
@@ -489,8 +585,8 @@ struct TypeCard: View {
                 Spacer()
                 if selected { Image(systemName: "checkmark.circle.fill").foregroundColor(.appPrimary) }
             }
-            .padding(14).background(Color.appCard).cornerRadius(14)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(selected ? Color.appPrimary : Color.appBorder, lineWidth: selected ? 2 : 1))
+            .padding(14).background(Color.appCard).cornerRadius(16)
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(selected ? Color.appPrimary : Color.appBorder, lineWidth: selected ? 2 : 1))
         }
         .buttonStyle(.plain)
     }
@@ -499,14 +595,68 @@ struct TypeCard: View {
 struct PaysPickerInline: View {
     let label: String; let pays: [Pays]; @Binding var selection: String
 
+    @State private var showSheet = false
+
+    private var selectedPays: Pays? { pays.first { $0.code == selection } }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label).font(.system(size: 13, weight: .medium)).foregroundColor(.appTextSecondary)
-            Picker("", selection: $selection) {
-                ForEach(pays) { p in Text("\(p.code.flagEmoji) \(p.nom)").tag(p.code) }
+            Button { showSheet = true } label: {
+                HStack {
+                    Text(selectedPays.map { "\($0.code.flagEmoji) \($0.nom)" } ?? "Sélectionner")
+                        .font(.system(size: 15))
+                        .foregroundColor(.appTextPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.appTextSecondary)
+                }
+                .padding(10)
+                .background(Color.appBackground)
+                .cornerRadius(10)
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appBorder))
             }
-            .pickerStyle(.menu).padding(10).background(Color.appBackground).cornerRadius(10)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appBorder))
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $showSheet) {
+            PaysSheetView(pays: pays, selection: $selection)
+        }
+    }
+}
+
+struct PaysSheetView: View {
+    let pays: [Pays]
+    @Binding var selection: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List(pays) { p in
+                Button {
+                    selection = p.code
+                    dismiss()
+                } label: {
+                    HStack {
+                        Text("\(p.code.flagEmoji) \(p.nom)")
+                            .font(.system(size: 16))
+                            .foregroundColor(.appTextPrimary)
+                        Spacer()
+                        if p.code == selection {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.appPrimary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Choisir un pays")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    CloseButton { dismiss() }
+                }
+            }
         }
     }
 }

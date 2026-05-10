@@ -70,7 +70,7 @@ struct SuiviColisView: View {
                                 .kerning(2)
                                 .textInputAutocapitalization(.characters)
                                 .autocorrectionDisabled()
-                                .onChange(of: codeInput) { v in codeInput = formatInput(v) }
+                                .onChange(of: codeInput) { codeInput = formatInput(codeInput) }
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 14)

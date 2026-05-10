@@ -1,35 +1,37 @@
 import SwiftUI
 
+// Tag libre (catégories, étiquettes annonces). Pour les statuts colorés, utiliser StatutBadge.
 struct TagBadge: View {
     let tag: String
+    var style: Style = .default
+
+    enum Style {
+        case `default`, urgent, success
+    }
 
     var body: some View {
         Text(tag.replacingOccurrences(of: "_", with: " "))
             .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(color)
+            .foregroundColor(foreground)
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
-            .background(backgroundColor)
-            .cornerRadius(99)
+            .background(background)
+            .cornerRadius(AppRadius.pill)
     }
 
-    private var color: Color {
-        if tag.contains("urgent") || tag.contains("hospitalisation") {
-            return .appError
-        } else if tag.contains("medicament") || tag.contains("humanitaire") {
-            return .appSuccess
-        } else {
-            return .appPrimary
+    private var foreground: Color {
+        switch style {
+        case .default: return .appPrimary
+        case .urgent:  return .appError
+        case .success: return .appSuccess
         }
     }
 
-    private var backgroundColor: Color {
-        if tag.contains("urgent") || tag.contains("hospitalisation") {
-            return .appErrorLight
-        } else if tag.contains("medicament") || tag.contains("humanitaire") {
-            return .appSuccessLight
-        } else {
-            return .appPrimaryLight
+    private var background: Color {
+        switch style {
+        case .default: return .appPrimaryLight
+        case .urgent:  return .appErrorLight
+        case .success: return .appSuccessLight
         }
     }
 }

@@ -45,7 +45,7 @@ struct ProfileView: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "star.fill")
                                         .font(.system(size: 12))
-                                        .foregroundColor(Color(hex: "F59E0B"))
+                                        .foregroundColor(.appWarning)
                                     Text(String(format: "%.1f", user.noteVoyageur))
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundColor(.appTextPrimary)
@@ -100,21 +100,13 @@ struct ProfileView: View {
                             TrajetsView()
                         } label: {
                             ProfileMenuRow(
-                                icon: "map.fill", iconColor: Color(hex: "0EA5E9"),
+                                icon: "map.fill", iconColor: Color.appInfo,
                                 label: "Mes trajets", subtitle: "Créer et gérer mes trajets"
                             )
                         }
                         .buttonStyle(.plain)
 
-                        NavigationLink {
-                            MesLivraisonsView()
-                        } label: {
-                            ProfileMenuRow(
-                                icon: "shippingbox.fill", iconColor: Color(hex: "F59E0B"),
-                                label: "Mes livraisons", subtitle: "Suivre mes colis expédiés"
-                            )
-                        }
-                        .buttonStyle(.plain)
+
                     }
                     .background(Color.appCard)
                     .cornerRadius(16)
@@ -192,8 +184,8 @@ struct ProfileView: View {
                 await vm?.loadProfile(userId: authState.userId ?? "")
                 await loadCertificationStatus()
             }
-            .onChange(of: showCertification) { isPresented in
-                if !isPresented { Task { await loadCertificationStatus() } }
+            .onChange(of: showCertification) {
+                if !showCertification { Task { await loadCertificationStatus() } }
             }
         }
         .task {
@@ -398,7 +390,7 @@ struct EditProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Annuler") { dismiss() }.foregroundColor(.appPrimary)
+                    CloseButton { dismiss() }
                 }
             }
         }
@@ -441,7 +433,7 @@ struct StatCard: View {
                 if let icon {
                     Image(systemName: icon)
                         .font(.system(size: 12))
-                        .foregroundColor(Color(hex: "F59E0B"))
+                        .foregroundColor(.appWarning)
                 }
             }
             Text(label)

@@ -7,22 +7,31 @@ final class AuthState: ObservableObject {
 
     private let keychain = KeychainStorage()
 
-    @Published var isLoggedIn:  Bool    = false
-    @Published var userId:      String? = nil
-    @Published var userNom:     String? = nil
-    @Published var userPrenom:  String? = nil
+    @Published var isLoggedIn:          Bool    = false
+    @Published var userId:              String? = nil
+    @Published var userEmail:           String? = nil
+    @Published var userNom:             String? = nil
+    @Published var userPrenom:          String? = nil
     @Published var certificationStatus: String? = nil
+    @Published var typeAbonnement:      String? = nil
+
+    var isCertifie: Bool { certificationStatus == "verifie" }
+    var isStandard: Bool { typeAbonnement == nil || typeAbonnement == "standard" }
+    var isPremium:  Bool { typeAbonnement == "premium" }
+    var isPro:      Bool { typeAbonnement == "pro" }
 
     init() {
         refresh()
     }
 
     func refresh() {
-        isLoggedIn = keychain.get(forKey: KeychainStorage.Keys.accessToken) != nil
-        userId     = keychain.get(forKey: KeychainStorage.Keys.userId)
-        userNom    = keychain.get(forKey: KeychainStorage.Keys.userNom)
-        userPrenom = keychain.get(forKey: KeychainStorage.Keys.userPrenom)
-        certificationStatus = keychain.get(forKey: "certificationStatus")
+        isLoggedIn          = keychain.get(forKey: KeychainStorage.Keys.accessToken) != nil
+        userId              = keychain.get(forKey: KeychainStorage.Keys.userId)
+        userEmail           = keychain.get(forKey: KeychainStorage.Keys.userEmail)
+        userNom             = keychain.get(forKey: KeychainStorage.Keys.userNom)
+        userPrenom          = keychain.get(forKey: KeychainStorage.Keys.userPrenom)
+        certificationStatus = keychain.get(forKey: KeychainStorage.Keys.certificationStatus)
+        typeAbonnement      = keychain.get(forKey: KeychainStorage.Keys.typeAbonnement)
     }
 
     func refreshTokenIfNeeded(apiClient: APIClient) async {
@@ -71,10 +80,12 @@ final class AuthState: ObservableObject {
 
     func logout() {
         keychain.clear()
-        isLoggedIn = false
-        userId     = nil
-        userNom    = nil
-        userPrenom = nil
+        isLoggedIn          = false
+        userId              = nil
+        userEmail           = nil
+        userNom             = nil
+        userPrenom          = nil
         certificationStatus = nil
+        typeAbonnement      = nil
     }
 }

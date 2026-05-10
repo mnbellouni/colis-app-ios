@@ -48,7 +48,7 @@ struct TrajetDetailView: View {
                         }
                         .padding(16)
                         .background(Color.appCard)
-                        .cornerRadius(12)
+                        .cornerRadius(13)
                         .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
                     }
 
@@ -67,7 +67,7 @@ struct TrajetDetailView: View {
                             }
                             .padding(.vertical, 12)
                             .background(Color.appCard)
-                            .cornerRadius(12)
+                            .cornerRadius(13)
                             .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
                         }
                     }
@@ -261,7 +261,7 @@ struct TrajetDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(Color.appCard)
-        .cornerRadius(12)
+        .cornerRadius(13)
         .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
     }
 

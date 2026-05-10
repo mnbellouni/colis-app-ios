@@ -30,7 +30,7 @@ struct ConversationsView: View {
 
                 // ── Contenu ───────────────────────────────
                 Group {
-                    if vm?.isLoading == true {
+                    if vm?.isLoading != false {
                         Spacer()
                         ProgressView().tint(.appPrimary)
                         Spacer()

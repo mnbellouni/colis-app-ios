@@ -1,15 +1,20 @@
 import Foundation
 import Combine
+import UIKit
 
 @MainActor
 final class CreateAnnonceViewModel: ObservableObject {
 
-    private let repository:      any AnnonceRepository
-    private let trajetRepository: any TrajetRepository
+    private let repository:         any AnnonceRepository
+    private let trajetRepository:   any TrajetRepository
+    private let messageRepository:  any MessageRepository
 
-    init(repository: any AnnonceRepository, trajetRepository: any TrajetRepository) {
-        self.repository       = repository
-        self.trajetRepository = trajetRepository
+    init(repository: any AnnonceRepository,
+         trajetRepository: any TrajetRepository,
+         messageRepository: any MessageRepository) {
+        self.repository        = repository
+        self.trajetRepository  = trajetRepository
+        self.messageRepository = messageRepository
     }
 
     @Published var isLoading             = false
@@ -98,11 +103,32 @@ final class CreateAnnonceViewModel: ObservableObject {
         trajetsSelectionnes = Set(items.map { $0.id })
     }
 
+    func uploadPhotos(_ images: [UIImage], annonceId: String) async {
+        for image in images.prefix(2) {
+            guard let data = image.jpegData(compressionQuality: 0.85) else { continue }
+            guard let urls = try? await repository.getUploadUrl(annonceId: annonceId, contentType: "image/jpeg"),
+                  let uploadUrl = urls["uploadUrl"],
+                  let photoUrl  = urls["photoUrl"] else { continue }
+            var req = URLRequest(url: URL(string: uploadUrl)!)
+            req.httpMethod = "PUT"
+            req.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+            _ = try? await URLSession.shared.upload(for: req, from: data)
+            _ = try? await repository.addPhoto(annonceId: annonceId, photoUrl: photoUrl)
+        }
+    }
+
     func envoyerDemandes(annonceId: String, userId: String) async {
+        isLoading = true
         let ids = trajetsSelectionnes
         for trajet in trajetsCompatibles where ids.contains(trajet.id) {
-            _ = try? await repository.getAnnonces(params: [:])
+            let contenu = "Bonjour, j'ai publié une annonce de transport et je souhaite vous proposer mon colis. Seriez-vous disponible ?"
+            _ = try? await messageRepository.sendMessage(
+                destinataireId: trajet.voyageurId,
+                contenu: contenu,
+                annonceId: annonceId
+            )
         }
+        isLoading = false
         demandesEnvoyees = true
     }
 }

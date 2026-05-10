@@ -3,9 +3,30 @@ import SwiftUI
 // ── Carte Annonce ─────────────────────────────────────────
 struct AnnonceCard: View {
     let annonce: Annonce
+    var isFavori: Bool = false
+    var onFavoriTap: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+
+            // Photo ou placeholder
+            Group {
+                if let url = annonce.photos.first, let imageURL = URL(string: url) {
+                    AsyncImage(url: imageURL) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFill()
+                        default:
+                            photoPlaceholder
+                        }
+                    }
+                } else {
+                    photoPlaceholder
+                }
+            }
+            .frame(height: 140)
+            .clipped()
+            .cornerRadius(12)
 
             // Chips catégorie + urgence | Favori
             HStack(spacing: 6) {
@@ -14,9 +35,14 @@ struct AnnonceCard: View {
                     CategoryChip(label: "Urgent", style: .urgent)
                 }
                 Spacer()
-                Image(systemName: "heart")
-                    .font(.system(size: 16))
-                    .foregroundColor(.appTextTertiary)
+                Button {
+                    onFavoriTap?()
+                } label: {
+                    Image(systemName: isFavori ? "heart.fill" : "heart")
+                        .font(.system(size: 16))
+                        .foregroundColor(isFavori ? .appError : .appTextTertiary)
+                }
+                .buttonStyle(.plain)
             }
 
             // Titre
@@ -45,7 +71,7 @@ struct AnnonceCard: View {
                     ForEach(0..<5, id: \.self) { _ in
                         Image(systemName: "star.fill")
                             .font(.system(size: 9))
-                            .foregroundColor(Color(hex: "F59E0B"))
+                            .foregroundColor(.appWarning)
                     }
                 }
                 Spacer()
@@ -66,7 +92,21 @@ struct AnnonceCard: View {
             RoundedRectangle(cornerRadius: 18)
                 .stroke(Color.appBorder, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.07), radius: 10, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.07), radius: 12, x: 0, y: 2)
+    }
+
+    private var photoPlaceholder: some View {
+        ZStack {
+            Color.appPrimaryLight
+            VStack(spacing: 6) {
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(.appPrimary.opacity(0.35))
+                Text(annonce.categories.first.map { $0.replacingOccurrences(of: "_", with: " ").capitalized } ?? "Colis")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.appPrimary.opacity(0.5))
+            }
+        }
     }
 }
 
@@ -154,40 +194,6 @@ struct AvatarView: View {
     }
 }
 
-// ── Statut Badge ──────────────────────────────────────────
-struct StatutBadge: View {
-    let statut: String
-
-    var body: some View {
-        Text(statut.replacingOccurrences(of: "_", with: " ").capitalized)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 3)
-            .background(backgroundColor)
-            .cornerRadius(99)
-    }
-
-    private var color: Color {
-        switch statut {
-        case "ouverte", "livre", "confirme": return .appSuccess
-        case "en_transit", "recupere":       return .appInfo
-        case "en_attente", "en_negociation": return .appWarning
-        case "litige":                       return .appError
-        default:                             return .appTextSecondary
-        }
-    }
-
-    private var backgroundColor: Color {
-        switch statut {
-        case "ouverte", "livre", "confirme": return .appSuccessLight
-        case "en_transit", "recupere":       return .appInfoLight
-        case "en_attente", "en_negociation": return .appWarningLight
-        case "litige":                       return .appErrorLight
-        default:                             return .appBorder
-        }
-    }
-}
 
 // ── RoutePoint (compatibilité) ────────────────────────────
 struct RoutePoint: View {

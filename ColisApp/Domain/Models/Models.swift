@@ -1,7 +1,7 @@
 import Foundation
 
 // ── User ──────────────────────────────────────────────────
-struct User: Codable, Identifiable {
+struct User: Identifiable {
     let id: String
     let email: String
     let nom: String
@@ -22,6 +22,52 @@ struct User: Codable, Identifiable {
     var isPro: Bool { abonnement == "pro" }
     var isPremium: Bool { abonnement == "premium" }
     var nomComplet: String { "\(prenom) \(nom)" }
+}
+
+extension User: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, email, nom, prenom, telephone, photo, bio
+        case typeAbonnement, noteVoyageur, noteExpediteur
+        case nbLivraisons, verified, actif, certificationStatus, createdAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id                  = try  c.decode(String.self, forKey: .id)
+        email               = (try? c.decodeIfPresent(String.self, forKey: .email)) ?? ""
+        nom                 = try  c.decode(String.self, forKey: .nom)
+        prenom              = try  c.decode(String.self, forKey: .prenom)
+        telephone           = (try? c.decodeIfPresent(String.self, forKey: .telephone)) ?? ""
+        photo               = (try? c.decodeIfPresent(String.self, forKey: .photo)) ?? ""
+        bio                 = (try? c.decodeIfPresent(String.self, forKey: .bio)) ?? ""
+        typeAbonnement      = try? c.decodeIfPresent(String.self, forKey: .typeAbonnement)
+        noteVoyageur        = (try? c.decodeIfPresent(Double.self, forKey: .noteVoyageur)) ?? 0
+        noteExpediteur      = (try? c.decodeIfPresent(Double.self, forKey: .noteExpediteur)) ?? 0
+        nbLivraisons        = (try? c.decodeIfPresent(Double.self, forKey: .nbLivraisons)) ?? 0
+        verified            = (try? c.decodeIfPresent(Bool.self, forKey: .verified)) ?? false
+        actif               = (try? c.decodeIfPresent(Bool.self, forKey: .actif)) ?? true
+        certificationStatus = (try? c.decodeIfPresent(String.self, forKey: .certificationStatus)) ?? "non_soumis"
+        createdAt           = (try? c.decodeIfPresent(String.self, forKey: .createdAt)) ?? ""
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id,                  forKey: .id)
+        try c.encode(email,               forKey: .email)
+        try c.encode(nom,                 forKey: .nom)
+        try c.encode(prenom,              forKey: .prenom)
+        try c.encode(telephone,           forKey: .telephone)
+        try c.encode(photo,               forKey: .photo)
+        try c.encode(bio,                 forKey: .bio)
+        try c.encodeIfPresent(typeAbonnement, forKey: .typeAbonnement)
+        try c.encode(noteVoyageur,        forKey: .noteVoyageur)
+        try c.encode(noteExpediteur,      forKey: .noteExpediteur)
+        try c.encode(nbLivraisons,        forKey: .nbLivraisons)
+        try c.encode(verified,            forKey: .verified)
+        try c.encode(actif,               forKey: .actif)
+        try c.encode(certificationStatus, forKey: .certificationStatus)
+        try c.encode(createdAt,           forKey: .createdAt)
+    }
 }
 
 struct AuthResponse: Codable {
@@ -371,4 +417,9 @@ struct Trajet: Codable, Identifiable {
     let createdAt: String
 
     var isOuvert: Bool { statut == "ouvert" }
+}
+
+struct PagedResult<T: Codable>: Codable {
+    let items: [T]
+    let nextToken: String?
 }

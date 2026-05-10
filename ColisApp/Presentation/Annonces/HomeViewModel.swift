@@ -6,62 +6,100 @@ final class HomeViewModel: ObservableObject {
 
     private let repository: any AnnonceRepository
     private let favorisRepository: any FavorisRepository
+    private let paysRepository: any PaysRepository
 
-    init(repository: any AnnonceRepository, favorisRepository: any FavorisRepository) {
+    init(repository: any AnnonceRepository, favorisRepository: any FavorisRepository, paysRepository: any PaysRepository) {
         self.repository        = repository
         self.favorisRepository = favorisRepository
+        self.paysRepository    = paysRepository
     }
 
+    @Published var pays:           [Pays]    = []
     @Published var annonces:       [Annonce] = []
-    @Published var isLoading       = false
+    @Published var isLoading       = true
+    @Published var isLoadingMore   = false
     @Published var error: String?  = nil
     @Published var selectedType: String? = nil
 
     // Filtres avancés
-    @Published var showFiltres     = false
-    @Published var filtrePaysDepart  = ""
-    @Published var filtreVilleDepart = ""
-    @Published var filtrePaysArrivee = ""
-    @Published var filtreVilleArrivee = ""
-    @Published var filtreUrgence   = false
-    @Published var filtreFavoris   = false
+    @Published var showFiltres           = false
+    @Published var filtresCategories     = Set<String>()
+    @Published var filtrePaysDepart      = Set<String>()
+    @Published var filtrePaysArrivee   = Set<String>()
+    @Published var filtreVilleDepart   = ""
+    @Published var filtreVilleArrivee  = ""
+    @Published var filtreUrgence       = false
+    @Published var filtreFavoris       = false
 
-    private var idsFavoris: Set<String> = []
+    static let categoriesDisponibles = [
+        "vetements", "electronique", "medicament",
+        "documents", "alimentaire", "cosmetique", "cadeau", "autre"
+    ]
+
+    private var nextToken: String?   = nil
+    @Published var idsFavoris: Set<String> = []
+
+    var hasMore: Bool { nextToken != nil }
 
     var filtresActifs: [(label: String, clear: () -> Void)] {
         var result: [(String, () -> Void)] = []
-        if !filtrePaysDepart.isEmpty   { result.append(("Départ: \(filtrePaysDepart)", { self.filtrePaysDepart  = "" })) }
-        if !filtreVilleDepart.isEmpty  { result.append(("Ville: \(filtreVilleDepart)", { self.filtreVilleDepart = "" })) }
-        if !filtrePaysArrivee.isEmpty  { result.append(("Arrivée: \(filtrePaysArrivee)", { self.filtrePaysArrivee  = "" })) }
+        for cat in filtresCategories.sorted() {
+            let captured = cat
+            result.append(("Cat: \(cat.capitalized)", { self.filtresCategories.remove(captured) }))
+        }
+        if !filtrePaysDepart.isEmpty   {
+            let label = filtrePaysDepart.count == 1
+                ? "Départ: \(filtrePaysDepart.first!)"
+                : "Départ: \(filtrePaysDepart.count)"
+            result.append((label, { self.filtrePaysDepart = [] }))
+        }
+        if !filtreVilleDepart.isEmpty  { result.append(("Ville: \(filtreVilleDepart)",       { self.filtreVilleDepart  = "" })) }
+        if !filtrePaysArrivee.isEmpty  {
+            let label = filtrePaysArrivee.count == 1
+                ? "Arrivée: \(filtrePaysArrivee.first!)"
+                : "Arrivée: \(filtrePaysArrivee.count)"
+            result.append((label, { self.filtrePaysArrivee = [] }))
+        }
         if !filtreVilleArrivee.isEmpty { result.append(("Ville arr.: \(filtreVilleArrivee)", { self.filtreVilleArrivee = "" })) }
-        if filtreUrgence               { result.append(("Urgent", { self.filtreUrgence = false })) }
-        if filtreFavoris               { result.append(("Favoris", { self.filtreFavoris = false })) }
+        if filtreUrgence               { result.append(("Urgent",  { self.filtreUrgence  = false })) }
+        if filtreFavoris               { result.append(("Favoris", { self.filtreFavoris  = false })) }
         return result
     }
 
     func loadAnnonces(type: String? = nil) async {
         isLoading = true
         error     = nil
+        nextToken = nil
         do {
-            var params: [String: String] = [:]
-            if let t = type ?? selectedType { params["type"] = t }
-            if !filtrePaysDepart.isEmpty    { params["paysDepart"]   = filtrePaysDepart }
-            if !filtreVilleDepart.isEmpty   { params["villeDepart"]  = filtreVilleDepart }
-            if !filtrePaysArrivee.isEmpty   { params["paysArrivee"]  = filtrePaysArrivee }
-            if !filtreVilleArrivee.isEmpty  { params["villeArrivee"] = filtreVilleArrivee }
-            if filtreUrgence                { params["priorite"]     = "haute" }
-
-            var items = try await repository.getAnnonces(params: params)
-
-            if filtreFavoris {
-                items = items.filter { idsFavoris.contains($0.id) }
-            }
-
-            annonces = items
+            let params  = buildParams(type: type ?? selectedType)
+            let page    = try await repository.getAnnoncesPage(params: params)
+            var items   = page.items
+            items = applyClientFilters(items)
+            annonces  = items
+            nextToken = page.nextToken
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    func loadMore() async {
+        guard !isLoadingMore, let token = nextToken else { return }
+        isLoadingMore = true
+        do {
+            var params  = buildParams(type: selectedType)
+            params["nextToken"] = token
+            let page    = try await repository.getAnnoncesPage(params: params)
+            var items   = page.items
+            items = applyClientFilters(items)
+            annonces += items
+            nextToken = page.nextToken
+        } catch {}
+        isLoadingMore = false
+    }
+
+    func loadPays() async {
+        pays = (try? await paysRepository.getPays()) ?? Pays.defauts
     }
 
     func loadFavorisIds(isLoggedIn: Bool) async {
@@ -70,16 +108,54 @@ final class HomeViewModel: ObservableObject {
         idsFavoris = Set(favs.map { $0.id })
     }
 
+    func toggleFavori(annonceId: String) async {
+        let estFavori = idsFavoris.contains(annonceId)
+        if estFavori {
+            idsFavoris.remove(annonceId)
+            try? await favorisRepository.removeFavori(annonceId: annonceId)
+        } else {
+            idsFavoris.insert(annonceId)
+            try? await favorisRepository.addFavori(annonceId: annonceId)
+        }
+    }
+
     func appliquerFiltres() async {
         await loadAnnonces(type: selectedType)
     }
 
     func clearAllFilters() {
-        filtrePaysDepart  = ""
-        filtreVilleDepart = ""
-        filtrePaysArrivee = ""
+        filtresCategories  = []
+        filtrePaysDepart   = []
+        filtrePaysArrivee  = []
+        filtreVilleDepart  = ""
         filtreVilleArrivee = ""
-        filtreUrgence     = false
-        filtreFavoris     = false
+        filtreUrgence      = false
+        filtreFavoris      = false
+    }
+
+    private func buildParams(type: String?) -> [String: String] {
+        var p: [String: String] = ["limit": "20"]
+        if let t = type                     { p["type"]        = t }
+        // API single-value: envoyer une catégorie quand une seule sélectionnée
+        if filtresCategories.count == 1, let cat = filtresCategories.first {
+                                            p["categorie"]   = cat }
+        if !filtrePaysDepart.isEmpty        { p["paysDepart"]  = filtrePaysDepart.sorted().joined(separator: ",") }
+        if !filtreVilleDepart.isEmpty       { p["villeDepart"] = filtreVilleDepart }
+        if !filtrePaysArrivee.isEmpty       { p["paysArrivee"] = filtrePaysArrivee.sorted().joined(separator: ",") }
+        if !filtreVilleArrivee.isEmpty      { p["villeArrivee"] = filtreVilleArrivee }
+        if filtreUrgence                    { p["priorite"]    = "urgent" }
+        return p
+    }
+
+    // Filtrage client-side pour multi-catégories et favoris
+    private func applyClientFilters(_ items: [Annonce]) -> [Annonce] {
+        var result = items
+        if filtresCategories.count > 1 {
+            result = result.filter { !Set($0.categories).isDisjoint(with: filtresCategories) }
+        }
+        if filtreFavoris {
+            result = result.filter { idsFavoris.contains($0.id) }
+        }
+        return result
     }
 }

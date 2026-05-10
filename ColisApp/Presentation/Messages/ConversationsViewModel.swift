@@ -11,7 +11,7 @@ final class ConversationsViewModel: ObservableObject {
     }
 
     @Published var conversations: [Conversation] = []
-    @Published var isLoading      = false
+    @Published var isLoading      = true
     @Published var error: String? = nil
 
     func loadConversations() async {

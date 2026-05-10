@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 struct RegisterView: View {
 
@@ -10,19 +9,21 @@ struct RegisterView: View {
     @StateObject private var vmHolder = VMHolder<RegisterViewModel>()
     private var vm: RegisterViewModel? { vmHolder.vm }
 
-    @State private var email          = ""
-    @State private var password       = ""
+    @State private var email           = ""
+    @State private var password        = ""
     @State private var confirmPassword = ""
-    @State private var nom            = ""
-    @State private var prenom         = ""
-    @State private var telephone      = ""
-    @State private var showPassword   = false
-    @State private var showConfirm    = false
+    @State private var nom             = ""
+    @State private var prenom          = ""
+    @State private var telephone       = ""
 
     // Validation
     @State private var emailError:    String? = nil
     @State private var passwordError: String? = nil
     @State private var confirmError:  String? = nil
+
+    @State private var emailTouched    = false
+    @State private var passwordTouched = false
+    @State private var confirmTouched  = false
 
     var body: some View {
         ScrollView {
@@ -51,9 +52,10 @@ struct RegisterView: View {
                             title:        "Email",
                             placeholder:  "Votre adresse email",
                             text:         $email,
-                            keyboardType: .emailAddress
+                            keyboardType: .emailAddress,
+                            onBlur:       { if emailTouched { validateEmail() } }
                         )
-                        .onSubmit { validateEmail() }
+                        .onChange(of: email) { emailTouched = true }
                         if let err = emailError {
                             Text(err).font(.system(size: 12)).foregroundColor(.appError)
                         }
@@ -68,13 +70,14 @@ struct RegisterView: View {
 
                     // Mot de passe
                     VStack(alignment: .leading, spacing: 4) {
-                        PasswordField(
+                        AppTextField(
                             title:       "Mot de passe",
                             placeholder: "Créez un mot de passe",
                             text:        $password,
-                            show:        $showPassword
+                            isSecure:    true,
+                            onBlur:      { if passwordTouched { validatePassword() } }
                         )
-                        .onSubmit { validatePassword() }
+                        .onChange(of: password) { passwordTouched = true }
                         if let err = passwordError {
                             Text(err).font(.system(size: 12)).foregroundColor(.appError)
                         }
@@ -83,13 +86,14 @@ struct RegisterView: View {
 
                     // Confirmation
                     VStack(alignment: .leading, spacing: 4) {
-                        PasswordField(
+                        AppTextField(
                             title:       "Confirmation mot de passe",
                             placeholder: "Confirmez votre mot de passe",
                             text:        $confirmPassword,
-                            show:        $showConfirm
+                            isSecure:    true,
+                            onBlur:      { if confirmTouched { validateConfirm() } }
                         )
-                        .onSubmit { validateConfirm() }
+                        .onChange(of: confirmPassword) { confirmTouched = true }
                         if let err = confirmError {
                             Text(err).font(.system(size: 12)).foregroundColor(.appError)
                         }
@@ -131,26 +135,34 @@ struct RegisterView: View {
             .padding(.bottom, 32)
         }
         .background(Color.appBackground)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task { vmHolder.vm = factory.makeRegisterViewModel() }
-        .onChange(of: vm?.isSuccess ?? false) { success in
-            if success { dismiss() }
+        .onChange(of: vm?.isSuccess ?? false) {
+            if vm?.isSuccess == true { dismiss() }
         }
-        .onChange(of: password) { _ in
-            if confirmPassword.isEmpty == false { validateConfirm() }
+        .onChange(of: password) {
+            if confirmTouched { validateConfirm() }
         }
     }
 
     private func validateEmail() {
         if email.isEmpty {
             emailError = "L'email est obligatoire"
-        } else if !email.contains("@") || !email.contains(".") {
-            emailError = "Format email invalide"
-        } else if email.contains(" ") {
+        } else if email.contains(" ") || !isValidEmailFormat(email) {
             emailError = "Format email invalide"
         } else {
             emailError = nil
         }
+    }
+
+    private func isValidEmailFormat(_ email: String) -> Bool {
+        let parts = email.split(separator: "@", maxSplits: 1)
+        guard parts.count == 2 else { return false }
+        let domain = String(parts[1])
+        guard let dotIndex = domain.lastIndex(of: ".") else { return false }
+        let tld = domain[domain.index(after: dotIndex)...]
+        return tld.count >= 2
     }
 
     private func validatePassword() {
@@ -180,44 +192,6 @@ struct RegisterView: View {
     }
 }
 
-// ── Champ mot de passe avec toggle visibilité ─────────────
-struct PasswordField: View {
-    let title:       String
-    let placeholder: String
-    @Binding var text: String
-    @Binding var show: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.appTextSecondary)
-            HStack {
-                Group {
-                    if show {
-                        TextField(placeholder, text: $text)
-                    } else {
-                        SecureField(placeholder, text: $text)
-                    }
-                }
-                .font(.system(size: 15))
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-
-                Button { show.toggle() } label: {
-                    Image(systemName: show ? "eye.slash" : "eye")
-                        .font(.system(size: 16))
-                        .foregroundColor(.appTextTertiary)
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 14)
-            .background(Color.appBackground)
-            .cornerRadius(12)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appBorder, lineWidth: 1))
-        }
-    }
-}
 
 // ── Barre de force du mot de passe ────────────────────────
 struct PasswordStrengthBar: View {

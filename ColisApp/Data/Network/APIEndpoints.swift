@@ -61,7 +61,8 @@ enum APIEndpoints {
     static func trackingForLivraison(livraisonId: String) -> String { "\(AppConfig.baseURL)/livraisons/\(livraisonId)/tracking" }
 
     // ── Trajets ───────────────────────────────────────────────
-    static var trajets: String { "\(AppConfig.baseURL)/trajets" }
+    static var trajets:      String { "\(AppConfig.baseURL)/trajets" }
+    static var trajetsLimit: String { "\(AppConfig.baseURL)/trajets/limit" }
     static func trajet(id: String) -> String { "\(AppConfig.baseURL)/trajets/\(id)" }
 
     // ── Favoris ───────────────────────────────────────────────

@@ -45,7 +45,7 @@ struct CreateOffreView: View {
                             .padding(14)
                             .frame(maxWidth: .infinity)
                             .background(Color.appWarningLight)
-                            .cornerRadius(12)
+                            .cornerRadius(13)
                         } else {
                             VStack(spacing: 8) {
                                 ForEach(trajets) { trajet in
@@ -124,8 +124,7 @@ struct CreateOffreView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Annuler") { dismiss() }
-                        .foregroundColor(.appPrimary)
+                    CloseButton { dismiss() }
                 }
             }
         }

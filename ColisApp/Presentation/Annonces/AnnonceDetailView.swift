@@ -11,10 +11,12 @@ struct AnnonceDetailView: View {
     @StateObject private var vmHolder = VMHolder<AnnonceDetailViewModel>()
     private var vm: AnnonceDetailViewModel? { vmHolder.vm }
 
-    @State private var showOffreSheet   = false
-    @State private var showLogin        = false
-    @State private var showLoginFavori  = false
+    @State private var showOffreSheet    = false
+    @State private var showLogin         = false
+    @State private var showLoginFavori   = false
     @State private var certificationError: String? = nil
+    @State private var showFermerAlert   = false
+    @State private var showPourvueSheet  = false
 
     var body: some View {
         ScrollView {
@@ -59,30 +61,50 @@ struct AnnonceDetailView: View {
                         }
 
                         // ── Itinéraire ────────────────────
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Itinéraire")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.appTextSecondary)
+                        HStack(alignment: .center, spacing: 12) {
 
-                            HStack(spacing: 12) {
-                                VStack(spacing: 4) {
-                                    Circle().fill(Color.appPrimary).frame(width: 10, height: 10)
-                                    Rectangle().fill(Color.appBorder).frame(width: 1, height: 28)
-                                    Circle().fill(Color.appSuccess).frame(width: 10, height: 10)
-                                }
-                                VStack(alignment: .leading, spacing: 14) {
-                                    Text("\(annonce.paysDepart.flagEmoji) \(annonce.villeDepart)")
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundColor(.appTextPrimary)
-                                    Text("\((annonce.paysArrivee ?? "").flagEmoji) \(annonce.villeArrivee ?? "")")
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundColor(.appTextPrimary)
-                                }
+                            // Départ
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Départ")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.appTextSecondary)
+                                Text(annonce.paysDepart.flagEmoji)
+                                    .font(.system(size: 22))
+                                Text(annonce.villeDepart)
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.appTextPrimary)
+                                    .lineLimit(1)
+                            }
+
+                            // Connecteur
+                            HStack(spacing: 0) {
+                                Circle().fill(Color.appPrimary).frame(width: 7, height: 7)
+                                Rectangle().fill(Color.appBorder).frame(height: 1)
+                                Image(systemName: "airplane")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.appPrimary)
+                                    .padding(.horizontal, 4)
+                                Rectangle().fill(Color.appBorder).frame(height: 1)
+                                Circle().fill(Color.appSuccess).frame(width: 7, height: 7)
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            // Arrivée
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text("Arrivée")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.appTextSecondary)
+                                Text((annonce.paysArrivee ?? "").flagEmoji)
+                                    .font(.system(size: 22))
+                                Text(annonce.villeArrivee ?? "–")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.appTextPrimary)
+                                    .lineLimit(1)
                             }
                         }
                         .padding(16)
                         .background(Color.appBackground)
-                        .cornerRadius(12)
+                        .cornerRadius(13)
 
                         // ── Détails poids / catégorie / fragile ──
                         HStack(spacing: 10) {
@@ -176,12 +198,52 @@ struct AnnonceDetailView: View {
         .sheet(isPresented: $showOffreSheet) {
             if let vm { CreateOffreView(annonceId: annonceId, vm: vm) }
         }
-        .sheet(isPresented: $showLogin)       { AuthNavigationView() }
-        .sheet(isPresented: $showLoginFavori) { AuthNavigationView() }
+        .sheet(isPresented: $showLogin) {
+            AuthNavigationView(onAuthenticated: {
+                if authState.certificationStatus == "verifie" {
+                    showOffreSheet = true
+                } else {
+                    certificationError = "Vous devez être certifié pour faire une offre. Complétez votre certification depuis votre profil."
+                }
+            })
+        }
+        .sheet(isPresented: $showLoginFavori) {
+            AuthNavigationView(onAuthenticated: {
+                Task {
+                    if let id = vm?.annonce?.id {
+                        await vm?.toggleFavori(annonceId: id)
+                    }
+                }
+            })
+        }
         .alert("Certification requise", isPresented: .constant(certificationError != nil)) {
             Button("OK") { certificationError = nil }
         } message: {
             if let e = certificationError { Text(e) }
+        }
+        .alert("Fermer l'annonce", isPresented: $showFermerAlert) {
+            Button("Fermer", role: .destructive) {
+                Task { await vm?.fermerAnnonce() }
+            }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("L'annonce ne sera plus visible pour les voyageurs.")
+        }
+        .sheet(isPresented: $showPourvueSheet) {
+            if let annonce = vm?.annonce {
+                PourvueSheet(
+                    offres: vm?.offres ?? [],
+                    demandeurId: annonce.demandeurId,
+                    onConfirm: { conversationId in
+                        Task { await vm?.marquerPourvue(conversationId: conversationId) }
+                    }
+                )
+            }
+        }
+        .alert("Erreur", isPresented: .constant(vm?.error != nil)) {
+            Button("OK") { vm?.error = nil }
+        } message: {
+            if let e = vm?.error { Text(e) }
         }
         .task {
             vmHolder.vm = factory.makeAnnonceDetailViewModel()
@@ -195,22 +257,36 @@ struct AnnonceDetailView: View {
         if !annonce.photos.isEmpty {
             TabView {
                 ForEach(annonce.photos.prefix(2), id: \.self) { url in
-                    AsyncImage(url: URL(string: url)) { img in
-                        img.resizable().scaledToFill()
-                    } placeholder: { Color.appBackground }
+                    AsyncImage(url: URL(string: url)) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFill()
+                        default:
+                            photoPlaceholder(annonce)
+                        }
+                    }
                     .clipped()
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: annonce.photos.count > 1 ? .always : .never))
             .frame(height: 220)
         } else {
-            ZStack {
-                Color.appPrimaryLight
+            photoPlaceholder(annonce)
+                .frame(height: 220)
+        }
+    }
+
+    private func photoPlaceholder(_ annonce: Annonce) -> some View {
+        ZStack {
+            Color.appPrimaryLight
+            VStack(spacing: 8) {
                 Image(systemName: "shippingbox.fill")
-                    .font(.system(size: 48))
-                    .foregroundColor(.appPrimary.opacity(0.4))
+                    .font(.system(size: 52))
+                    .foregroundColor(.appPrimary.opacity(0.35))
+                Text(annonce.categories.first.map { $0.replacingOccurrences(of: "_", with: " ").capitalized } ?? "Colis")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.appPrimary.opacity(0.5))
             }
-            .frame(height: 160)
         }
     }
 
@@ -256,8 +332,8 @@ struct AnnonceDetailView: View {
             }
             .padding(14)
             .background(Color.appCard)
-            .cornerRadius(12)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appBorder, lineWidth: 1))
+            .cornerRadius(13)
+            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1))
         }
     }
 
@@ -274,27 +350,68 @@ struct AnnonceDetailView: View {
     // ── Annonceur ───────────────────────────────────────────
     @ViewBuilder
     private func annonceurSection(_ annonce: Annonce) -> some View {
-        HStack(spacing: 12) {
-            AvatarView(seed: annonce.demandeurId, size: 44)
-            VStack(alignment: .leading, spacing: 3) {
+        let user        = vm?.annonceur
+        let evals       = vm?.evaluationsAnnonceur
+        let displayName = user?.nomComplet ?? String(annonce.demandeurId.prefix(8))
+        let note        = evals?.moyenne ?? user?.noteExpediteur ?? 0
+        let nbAvis      = evals?.total ?? 0
+
+        NavigationLink {
+            AnnonceurProfilView(userId: annonce.demandeurId)
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+
                 Text("Annonceur")
-                    .font(.system(size: 12)).foregroundColor(.appTextTertiary)
-                NavigationLink(value: annonce.demandeurId) {
-                    HStack(spacing: 4) {
-                        Text(String(annonce.demandeurId.prefix(8)))
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.appPrimary)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10)).foregroundColor(.appPrimary)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.appTextSecondary)
+
+                HStack(spacing: 12) {
+                    AvatarView(seed: annonce.demandeurId, size: 48)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text(displayName)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.appTextPrimary)
+                            if user?.verified == true {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.appPrimary)
+                            }
+                        }
+                        HStack(spacing: 4) {
+                            ForEach(0..<5, id: \.self) { i in
+                                Image(systemName: Double(i) < note ? "star.fill" : "star")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.appWarning)
+                            }
+                            Text(nbAvis > 0 ? "(\(nbAvis) avis)" : "Aucun avis")
+                                .font(.system(size: 11))
+                                .foregroundColor(.appTextTertiary)
+                        }
                     }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.appTextTertiary)
+                }
+
+                if let comment = evals?.items.first?.commentaire, !comment.isEmpty {
+                    Text("\"\(comment)\"")
+                        .font(.system(size: 12))
+                        .foregroundColor(.appTextSecondary)
+                        .italic()
+                        .lineLimit(2)
                 }
             }
-            Spacer()
+            .padding(14)
+            .background(Color.appCard)
+            .cornerRadius(13)
+            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1))
         }
-        .padding(14)
-        .background(Color.appCard)
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appBorder, lineWidth: 1))
+        .buttonStyle(.plain)
     }
 
     // ── Boutons d'action ────────────────────────────────────
@@ -304,7 +421,28 @@ struct AnnonceDetailView: View {
         let isOuverte   = annonce.statut == "ouverte"
         let isCertified = authState.certificationStatus == "verifie"
 
-        if !isOwner && isOuverte {
+        if isOwner {
+            if isOuverte {
+                AppButton(title: "Marquer comme pourvue") {
+                    showPourvueSheet = true
+                }
+                Button {
+                    showFermerAlert = true
+                } label: {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "xmark.circle").font(.system(size: 14))
+                        Text("Fermer l'annonce").font(.system(size: 16, weight: .semibold))
+                        Spacer()
+                    }
+                    .foregroundColor(.appError)
+                    .frame(height: 52)
+                    .background(Color.appErrorLight)
+                    .cornerRadius(13)
+                }
+                .buttonStyle(.plain)
+            }
+        } else if isOuverte {
             if authState.isLoggedIn {
                 AppButton(title: "Faire une offre") {
                     if isCertified {
@@ -380,6 +518,77 @@ struct DetailItem: View {
         .background(Color.appCard)
         .cornerRadius(10)
         .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
+    }
+}
+
+// ── Feuille de sélection pour "pourvue" ───────────────────
+struct PourvueSheet: View {
+    let offres: [Offre]
+    let demandeurId: String
+    let onConfirm: (String?) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button {
+                        onConfirm(nil)
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.appSuccess)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Marquer sans lien")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(.appTextPrimary)
+                                Text("Sans associer une conversation spécifique")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.appTextSecondary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                if !offres.isEmpty {
+                    Section("Associer à une offre reçue") {
+                        ForEach(offres) { offre in
+                            let conversationId = [demandeurId, offre.voyageurId].sorted().joined(separator: "_")
+                            Button {
+                                onConfirm(conversationId)
+                                dismiss()
+                            } label: {
+                                HStack(spacing: 12) {
+                                    AvatarView(seed: offre.voyageurId, size: 36)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("\(offre.villeDepart) → \(offre.villeArrivee)")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(.appTextPrimary)
+                                        Text(offre.message.isEmpty ? "Offre sans message" : offre.message)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.appTextSecondary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                    Text("\(Int(offre.fraisService)) €")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.appPrimary)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Marquer comme pourvue")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { CloseButton { dismiss() } }
+            }
+        }
     }
 }
 

@@ -7,28 +7,38 @@ final class AnnonceDetailViewModel: ObservableObject {
     private let annonceRepository:  any AnnonceRepository
     private let offreRepository:    any OffreRepository
     private let favorisRepository:  any FavorisRepository
+    private let userRepository:     any UserRepository
 
     init(
         annonceRepository:  any AnnonceRepository,
         offreRepository:    any OffreRepository,
-        favorisRepository:  any FavorisRepository
+        favorisRepository:  any FavorisRepository,
+        userRepository:     any UserRepository
     ) {
         self.annonceRepository  = annonceRepository
         self.offreRepository    = offreRepository
         self.favorisRepository  = favorisRepository
+        self.userRepository     = userRepository
     }
 
-    @Published var annonce:      Annonce? = nil
-    @Published var offres:       [Offre]  = []
-    @Published var isFavori:     Bool     = false
-    @Published var isLoading     = false
-    @Published var offreEnvoyee  = false
-    @Published var error: String? = nil
+    @Published var annonce:            Annonce?         = nil
+    @Published var annonceur:          User?            = nil
+    @Published var evaluationsAnnonceur: EvaluationResult? = nil
+    @Published var offres:             [Offre]          = []
+    @Published var isFavori:           Bool             = false
+    @Published var isLoading           = false
+    @Published var offreEnvoyee        = false
+    @Published var statutChange        = false
+    @Published var error: String?      = nil
 
     func load(id: String, isLoggedIn: Bool = false) async {
         isLoading = true
         do {
             annonce = try await annonceRepository.getAnnonce(id: id)
+            if let demandeurId = annonce?.demandeurId {
+                annonceur            = try? await userRepository.getUser(id: demandeurId)
+                evaluationsAnnonceur = try? await userRepository.getEvaluations(userId: demandeurId)
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -52,6 +62,30 @@ final class AnnonceDetailViewModel: ObservableObject {
             isFavori = ancienEtat
             self.error = error.localizedDescription
         }
+    }
+
+    func fermerAnnonce() async {
+        guard let id = annonce?.id else { return }
+        isLoading = true
+        do {
+            annonce = try await annonceRepository.changeStatut(id: id, statut: "fermee", conversationId: nil)
+            statutChange = true
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    func marquerPourvue(conversationId: String?) async {
+        guard let id = annonce?.id else { return }
+        isLoading = true
+        do {
+            annonce = try await annonceRepository.changeStatut(id: id, statut: "pourvue", conversationId: conversationId)
+            statutChange = true
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isLoading = false
     }
 
     func envoyerOffre(

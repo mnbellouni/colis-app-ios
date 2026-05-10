@@ -31,8 +31,8 @@ struct AppButton: View {
                     .stroke(borderColor, lineWidth: style == .outline ? 1.5 : 0)
             )
             .shadow(
-                color: style == .primary ? Color(hex: "00875A").opacity(0.30) : .clear,
-                radius: 10, x: 0, y: 4
+                color: style == .primary ? Color.appPrimary.opacity(0.30) : .clear,
+                radius: 12, x: 0, y: 6
             )
         }
         .disabled(isLoading)

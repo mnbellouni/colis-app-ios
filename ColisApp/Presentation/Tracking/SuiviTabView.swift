@@ -11,7 +11,7 @@ struct SuiviTabView: View {
     @State private var error: String?
     @State private var hasSearched = false
     @State private var livraisons: [Livraison] = []
-    @State private var livraisonsLoading = false
+    @State private var livraisonsLoading = true
 
     var body: some View {
         ScrollView {
@@ -33,7 +33,7 @@ struct SuiviTabView: View {
                             .kerning(1.5)
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
-                            .onChange(of: codeInput) { v in codeInput = formatCode(v) }
+                            .onChange(of: codeInput) {codeInput = formatCode(codeInput) }
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 14)
@@ -238,8 +238,8 @@ struct SuiviLivraisonCard: View {
         }
         .padding(14)
         .background(Color.appCard)
-        .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.appBorder, lineWidth: 1))
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appBorder, lineWidth: 1))
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 1)
     }
 }

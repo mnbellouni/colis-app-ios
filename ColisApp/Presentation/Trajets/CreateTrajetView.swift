@@ -9,6 +9,9 @@ struct CreateTrajetView: View {
 
     let pays = ["FR", "MA", "DZ", "TN", "ES", "IT", "DE", "BE", "GB"]
 
+    @State private var showPaysDepart  = false
+    @State private var showPaysArrivee = false
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -25,16 +28,24 @@ struct CreateTrajetView: View {
                             Text("Pays")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(.appTextSecondary)
-                            Picker("", selection: $vm.paysDepart) {
-                                ForEach(pays, id: \.self) { p in
-                                    Text("\(p.flagEmoji) \(p)").tag(p)
+                            Button { showPaysDepart = true } label: {
+                                HStack {
+                                    Text("\(vm.paysDepart.flagEmoji) \(vm.paysDepart)")
+                                        .font(.system(size: 15)).foregroundColor(.appTextPrimary)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.appTextSecondary)
                                 }
+                                .padding(10)
+                                .background(Color.appBackground)
+                                .cornerRadius(10)
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appBorder))
                             }
-                            .pickerStyle(.menu)
-                            .padding(10)
-                            .background(Color.appBackground)
-                            .cornerRadius(10)
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appBorder))
+                            .buttonStyle(.plain)
+                            .sheet(isPresented: $showPaysDepart) {
+                                PaysCodeSheetView(pays: pays, selection: $vm.paysDepart)
+                            }
                         }
                     }
 
@@ -82,24 +93,13 @@ struct CreateTrajetView: View {
                                         )
                                     )
 
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text("Pays")
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundColor(.appTextSecondary)
-                                        Picker("", selection: Binding(
+                                    EtapePaysButton(
+                                        pays: pays,
+                                        selection: Binding(
                                             get: { vm.etapes[safe: index]?.pays ?? "FR" },
                                             set: { vm.etapes[safe: index]?.pays = $0 }
-                                        )) {
-                                            ForEach(pays, id: \.self) { p in
-                                                Text("\(p.flagEmoji) \(p)").tag(p)
-                                            }
-                                        }
-                                        .pickerStyle(.menu)
-                                        .padding(10)
-                                        .background(Color.appBackground)
-                                        .cornerRadius(10)
-                                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appBorder))
-                                    }
+                                        )
+                                    )
                                     .frame(width: 90)
 
                                     Button {
@@ -121,8 +121,8 @@ struct CreateTrajetView: View {
                     }
                     .padding(14)
                     .background(Color.appCard)
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appBorder))
+                    .cornerRadius(13)
+                    .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder))
 
                     // ── Ville arrivée ────────────────────
                     HStack(spacing: 12) {
@@ -135,16 +135,24 @@ struct CreateTrajetView: View {
                             Text("Pays")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(.appTextSecondary)
-                            Picker("", selection: $vm.paysArrivee) {
-                                ForEach(pays, id: \.self) { p in
-                                    Text("\(p.flagEmoji) \(p)").tag(p)
+                            Button { showPaysArrivee = true } label: {
+                                HStack {
+                                    Text("\(vm.paysArrivee.flagEmoji) \(vm.paysArrivee)")
+                                        .font(.system(size: 15)).foregroundColor(.appTextPrimary)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.appTextSecondary)
                                 }
+                                .padding(10)
+                                .background(Color.appBackground)
+                                .cornerRadius(10)
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appBorder))
                             }
-                            .pickerStyle(.menu)
-                            .padding(10)
-                            .background(Color.appBackground)
-                            .cornerRadius(10)
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appBorder))
+                            .buttonStyle(.plain)
+                            .sheet(isPresented: $showPaysArrivee) {
+                                PaysCodeSheetView(pays: pays, selection: $vm.paysArrivee)
+                            }
                         }
                     }
 
@@ -224,12 +232,78 @@ struct CreateTrajetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Annuler") { dismiss() }
-                        .foregroundColor(.appPrimary)
+                    CloseButton { dismiss() }
                 }
             }
-            .onChange(of: vm.isSuccess) { success in
-                if success { dismiss() }
+            .onChange(of: vm.isSuccess) {
+                if vm.isSuccess == true { dismiss() }
+            }
+        }
+    }
+}
+
+private struct EtapePaysButton: View {
+    let pays: [String]
+    @Binding var selection: String
+    @State private var showSheet = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Pays")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.appTextSecondary)
+            Button { showSheet = true } label: {
+                HStack(spacing: 4) {
+                    Text("\(selection.flagEmoji) \(selection)")
+                        .font(.system(size: 14)).foregroundColor(.appTextPrimary)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.appTextSecondary)
+                }
+                .padding(10)
+                .background(Color.appBackground)
+                .cornerRadius(10)
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appBorder))
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showSheet) {
+                PaysCodeSheetView(pays: pays, selection: $selection)
+            }
+        }
+    }
+}
+
+private struct PaysCodeSheetView: View {
+    let pays: [String]
+    @Binding var selection: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List(pays, id: \.self) { p in
+                Button {
+                    selection = p
+                    dismiss()
+                } label: {
+                    HStack {
+                        Text("\(p.flagEmoji) \(p)")
+                            .font(.system(size: 16))
+                            .foregroundColor(.appTextPrimary)
+                        Spacer()
+                        if p == selection {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.appPrimary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Choisir un pays")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    CloseButton { dismiss() }
+                }
             }
         }
     }

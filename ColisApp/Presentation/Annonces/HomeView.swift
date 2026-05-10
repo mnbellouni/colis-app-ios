@@ -8,8 +8,10 @@ struct HomeView: View {
     @StateObject private var vmHolder = VMHolder<HomeViewModel>()
     private var vm: HomeViewModel? { vmHolder.vm }
 
-    @State private var showCreate = false
-    @State private var showLogin  = false
+    @State private var showCreate           = false
+    @State private var showLogin            = false
+    @State private var showLoginFavori      = false
+    @State private var pendingFavoriId: String? = nil
 
     let types = [
         ("Tout",      nil as String?),
@@ -35,16 +37,31 @@ struct HomeView: View {
                         Spacer()
 
                         HStack(spacing: 8) {
+                            // Bouton filtre – quad glass
                             Button {
                                 vm?.showFiltres = true
                             } label: {
-                                Image(systemName: vm?.filtresActifs.isEmpty == false
-                                      ? "line.3.horizontal.decrease.circle.fill"
-                                      : "line.3.horizontal.decrease.circle")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(vm?.filtresActifs.isEmpty == false ? .appPrimary : .appTextSecondary)
+                                let hasFilters = vm?.filtresActifs.isEmpty == false
+                                Image(systemName: "line.3.horizontal.decrease")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(hasFilters ? .appPrimary : .appTextSecondary)
+                                    .frame(width: 36, height: 36)
+                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                    )
+                                    .overlay(alignment: .topTrailing) {
+                                        if hasFilters {
+                                            Circle()
+                                                .fill(Color.appPrimary)
+                                                .frame(width: 8, height: 8)
+                                                .offset(x: 4, y: -4)
+                                        }
+                                    }
                             }
 
+                            // Bouton + – quad glass + gradient
                             Button {
                                 if authState.isLoggedIn { showCreate = true }
                                 else { showLogin = true }
@@ -53,8 +70,16 @@ struct HomeView: View {
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.white)
                                     .frame(width: 40, height: 40)
-                                    .background(LinearGradient.appPrimary)
-                                    .cornerRadius(13)
+                                    .background {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 13).fill(.ultraThinMaterial)
+                                            RoundedRectangle(cornerRadius: 13).fill(Color.appPrimary)
+                                        }
+                                    }
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 13)
+                                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                    )
                             }
                         }
                     }
@@ -63,9 +88,10 @@ struct HomeView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(types, id: \.0) { label, type in
-                                FilterChip(label: label, isSelected: vm?.selectedType == type) {
-                                    vm?.selectedType = type
-                                    Task { await vm?.loadAnnonces(type: type) }
+                                FilterChip(label: label, isSelected: vm?.selectedType == type, glass: false) {
+                                    guard let vm else { return }
+                                    vm.selectedType = type
+                                    Task { await vm.loadAnnonces(type: type) }
                                 }
                             }
                         }
@@ -107,7 +133,7 @@ struct HomeView: View {
                 }
 
                 // ── Contenu ───────────────────────────────
-                if vm?.isLoading == true {
+                if vm?.isLoading != false {
                     Spacer()
                     ProgressView().tint(.appPrimary)
                     Spacer()
@@ -134,9 +160,28 @@ struct HomeView: View {
                                 NavigationLink {
                                     AnnonceDetailView(annonceId: annonce.id)
                                 } label: {
-                                    AnnonceCard(annonce: annonce)
+                                    AnnonceCard(
+                                        annonce: annonce,
+                                        isFavori: vm?.idsFavoris.contains(annonce.id) ?? false,
+                                        onFavoriTap: {
+                                            if authState.isLoggedIn {
+                                                Task { await vm?.toggleFavori(annonceId: annonce.id) }
+                                            } else {
+                                                pendingFavoriId = annonce.id
+                                                showLoginFavori = true
+                                            }
+                                        }
+                                    )
                                 }
                                 .buttonStyle(.plain)
+                                .onAppear {
+                                    if annonce.id == vm?.annonces.last?.id {
+                                        Task { await vm?.loadMore() }
+                                    }
+                                }
+                            }
+                            if vm?.isLoadingMore == true {
+                                ProgressView().tint(.appPrimary).padding(.vertical, 8)
                             }
                         }
                         .padding(16)
@@ -147,7 +192,17 @@ struct HomeView: View {
             .background(Color.appBackground)
             .navigationBarHidden(true)
             .sheet(isPresented: $showCreate) { CreateAnnonceView() }
-            .sheet(isPresented: $showLogin)  { AuthNavigationView() }
+            .sheet(isPresented: $showLogin)  { AuthNavigationView(onAuthenticated: { showCreate = true }) }
+            .sheet(isPresented: $showLoginFavori) {
+                AuthNavigationView(onAuthenticated: {
+                    let id = pendingFavoriId
+                    pendingFavoriId = nil
+                    Task {
+                        await vm?.loadFavorisIds(isLoggedIn: true)
+                        if let id { await vm?.toggleFavori(annonceId: id) }
+                    }
+                })
+            }
             .sheet(isPresented: Binding(
                 get: { vm?.showFiltres ?? false },
                 set: { vm?.showFiltres = $0 }
@@ -157,52 +212,104 @@ struct HomeView: View {
         }
         .task {
             vmHolder.vm = factory.makeHomeViewModel()
+            await vm?.loadPays()
             await vm?.loadFavorisIds(isLoggedIn: authState.isLoggedIn)
             await vm?.loadAnnonces()
         }
     }
 }
 
-// ── Panneau filtres avancés ───────────────────────────────
+// ── Panneau filtres avancés – accordion ───────────────────
 
 struct HomeFiltresView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var vm: HomeViewModel
 
+    @State private var openSection: String? = nil
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    AppTextField(title: "Pays de départ",  placeholder: "FR", text: $vm.filtrePaysDepart)
-                    AppTextField(title: "Ville de départ", placeholder: "Paris", text: $vm.filtreVilleDepart)
-                    AppTextField(title: "Pays d'arrivée",  placeholder: "MA", text: $vm.filtrePaysArrivee)
-                    AppTextField(title: "Ville d'arrivée", placeholder: "Casablanca", text: $vm.filtreVilleArrivee)
+                VStack(spacing: 10) {
 
-                    Toggle(isOn: $vm.filtreUrgence) {
-                        Label("Annonces urgentes uniquement", systemImage: "exclamationmark.triangle.fill")
-                            .font(.system(size: 15)).foregroundColor(.appTextPrimary)
+                    accordionCard(
+                        "Catégorie", icon: "tag.fill",
+                        selectedLabels: vm.filtresCategories.sorted().map { $0.capitalized }
+                    ) {
+                        MultiSelectSection(
+                            title: "",
+                            items: HomeViewModel.categoriesDisponibles,
+                            selected: $vm.filtresCategories,
+                            labelFor: { $0.capitalized }
+                        )
                     }
-                    .tint(.appPrimary)
 
-                    Toggle(isOn: $vm.filtreFavoris) {
-                        Label("Mes favoris uniquement", systemImage: "heart.fill")
-                            .font(.system(size: 15)).foregroundColor(.appTextPrimary)
+                    accordionCard(
+                        "Départ", icon: "airplane.departure",
+                        selectedLabels: departLabels
+                    ) {
+                        VStack(spacing: 14) {
+                            MultiSelectSection(
+                                title: "Pays de départ",
+                                items: vm.pays.map { $0.code },
+                                selected: $vm.filtrePaysDepart,
+                                labelFor: { code in vm.pays.first { $0.code == code }?.nom ?? code }
+                            )
+                            AppTextField(title: "Ville", placeholder: "Paris",
+                                         text: $vm.filtreVilleDepart)
+                        }
                     }
-                    .tint(.appError)
 
-                    AppButton(title: "Appliquer les filtres") {
-                        Task { await vm.appliquerFiltres() }
-                        dismiss()
+                    accordionCard(
+                        "Arrivée", icon: "airplane.arrival",
+                        selectedLabels: arriveeLabels
+                    ) {
+                        VStack(spacing: 14) {
+                            MultiSelectSection(
+                                title: "Pays d'arrivée",
+                                items: vm.pays.map { $0.code },
+                                selected: $vm.filtrePaysArrivee,
+                                labelFor: { code in vm.pays.first { $0.code == code }?.nom ?? code }
+                            )
+                            AppTextField(title: "Ville", placeholder: "Casablanca",
+                                         text: $vm.filtreVilleArrivee)
+                        }
                     }
-                    Button {
-                        vm.clearAllFilters()
-                        Task { await vm.loadAnnonces() }
-                        dismiss()
-                    } label: {
-                        Text("Réinitialiser")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.appError)
+
+                    accordionCard(
+                        "Options", icon: "slider.horizontal.3",
+                        selectedLabels: optionsLabels
+                    ) {
+                        VStack(spacing: 14) {
+                            Toggle(isOn: $vm.filtreUrgence) {
+                                Label("Urgentes uniquement", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 15)).foregroundColor(.appTextPrimary)
+                            }
+                            .tint(.appPrimary)
+                            Toggle(isOn: $vm.filtreFavoris) {
+                                Label("Mes favoris", systemImage: "heart.fill")
+                                    .font(.system(size: 15)).foregroundColor(.appTextPrimary)
+                            }
+                            .tint(.appError)
+                        }
                     }
+
+                    VStack(spacing: 12) {
+                        AppButton(title: "Appliquer les filtres") {
+                            Task { await vm.appliquerFiltres() }
+                            dismiss()
+                        }
+                        Button {
+                            vm.clearAllFilters()
+                            Task { await vm.loadAnnonces() }
+                            dismiss()
+                        } label: {
+                            Text("Réinitialiser")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.appError)
+                        }
+                    }
+                    .padding(.top, 6)
                 }
                 .padding(18)
             }
@@ -211,30 +318,200 @@ struct HomeFiltresView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Fermer") { dismiss() }.foregroundColor(.appPrimary)
+                    CloseButton { dismiss() }
                 }
             }
         }
     }
+
+    // ── Labels résumé ─────────────────────────────────────────
+    private var departLabels: [String] {
+        var items = vm.filtrePaysDepart.sorted()
+            .compactMap { code in vm.pays.first { $0.code == code }?.nom }
+        if !vm.filtreVilleDepart.isEmpty { items.append(vm.filtreVilleDepart) }
+        return items
+    }
+
+    private var arriveeLabels: [String] {
+        var items = vm.filtrePaysArrivee.sorted()
+            .compactMap { code in vm.pays.first { $0.code == code }?.nom }
+        if !vm.filtreVilleArrivee.isEmpty { items.append(vm.filtreVilleArrivee) }
+        return items
+    }
+
+    private var optionsLabels: [String] {
+        [vm.filtreUrgence ? "Urgent" : nil,
+         vm.filtreFavoris ? "Favoris" : nil].compactMap { $0 }
+    }
+
+    // ── Accordion card ────────────────────────────────────────
+    @ViewBuilder
+    private func accordionCard<Content: View>(
+        _ title: String,
+        icon: String,
+        selectedLabels: [String],
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        let isOpen    = openSection == title
+        let hasValue  = !selectedLabels.isEmpty
+        VStack(spacing: 0) {
+
+            // Header
+            Button {
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    openSection = isOpen ? nil : title
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(isOpen || hasValue ? .appPrimary : .appTextSecondary)
+                        .frame(width: 18)
+                    Text(title)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.appTextPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.appTextTertiary)
+                        .rotationEffect(.degrees(isOpen ? 180 : 0))
+                        .animation(.easeInOut(duration: 0.22), value: isOpen)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, hasValue && !isOpen ? 8 : 14)
+                .contentShape(Rectangle())
+            }
+
+            // Résumé des sélections (visible uniquement quand fermé)
+            if hasValue && !isOpen {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(selectedLabels, id: \.self) { label in
+                            Text(label)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.appPrimary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.appPrimaryLight)
+                                .cornerRadius(AppRadius.pill)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .padding(.bottom, 12)
+                .transition(.opacity)
+            }
+
+            // Contenu (visible quand ouvert)
+            if isOpen {
+                Divider().padding(.horizontal, 16)
+                content()
+                    .padding(16)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .background(Color.appCard)
+        .cornerRadius(13)
+        .overlay(RoundedRectangle(cornerRadius: 13)
+            .stroke(isOpen ? Color.appPrimary.opacity(0.3) : Color.appBorder,
+                    lineWidth: isOpen ? 1.5 : 1))
+        .clipped()
+    }
 }
 
-// ── Filter Chip ───────────────────────────────────────────
+// ── Single-select section ─────────────────────────────────
 
-struct FilterChip: View {
-    let label: String
-    let isSelected: Bool
-    let action: () -> Void
+private struct SingleSelectSection: View {
+    let title: String
+    let items: [String]
+    @Binding var selected: String?
+    let labelFor: (String) -> String
 
     var body: some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                .foregroundColor(isSelected ? .white : .appTextSecondary)
-                .padding(.horizontal, 16).padding(.vertical, 8)
-                .background(isSelected ? Color.appPrimary : Color.appCanvas)
-                .cornerRadius(99)
-                .overlay(RoundedRectangle(cornerRadius: 99)
-                    .stroke(isSelected ? Color.clear : Color.appBorder, lineWidth: 1))
+        VStack(alignment: .leading, spacing: 10) {
+            if !title.isEmpty {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.appTextSecondary)
+            }
+
+            VStack(spacing: 0) {
+                ForEach(items, id: \.self) { item in
+                    let isSelected = selected == item
+                    Button {
+                        selected = isSelected ? nil : item
+                    } label: {
+                        HStack {
+                            Text(labelFor(item))
+                                .font(.system(size: 15))
+                                .foregroundColor(.appTextPrimary)
+                            Spacer()
+                            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 18))
+                                .foregroundColor(isSelected ? .appPrimary : .appBorder)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    if item != items.last {
+                        Divider().padding(.leading, 14)
+                    }
+                }
+            }
+            .background(Color.appCanvas)
+            .cornerRadius(13)
+            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1.5))
         }
     }
 }
+
+// ── Multi-select section ──────────────────────────────────
+
+private struct MultiSelectSection: View {
+    let title: String
+    let items: [String]
+    @Binding var selected: Set<String>
+    let labelFor: (String) -> String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if !title.isEmpty {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.appTextSecondary)
+            }
+
+            VStack(spacing: 0) {
+                ForEach(items, id: \.self) { item in
+                    let isSelected = selected.contains(item)
+                    Button {
+                        if isSelected { selected.remove(item) }
+                        else { selected.insert(item) }
+                    } label: {
+                        HStack {
+                            Text(labelFor(item))
+                                .font(.system(size: 15))
+                                .foregroundColor(.appTextPrimary)
+                            Spacer()
+                            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 18))
+                                .foregroundColor(isSelected ? .appPrimary : .appBorder)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    if item != items.last {
+                        Divider().padding(.leading, 14)
+                    }
+                }
+            }
+            .background(Color.appCanvas)
+            .cornerRadius(13)
+            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1.5))
+        }
+    }
+}
+

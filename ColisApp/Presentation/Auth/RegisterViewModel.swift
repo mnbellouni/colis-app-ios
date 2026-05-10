@@ -40,8 +40,19 @@ final class RegisterViewModel: ObservableObject {
             isSuccess = true
             authState.refresh()
         } catch {
-            self.error = error.localizedDescription
+            self.error = mapError(error)
         }
         isLoading = false
+    }
+
+    private func mapError(_ error: Error) -> String {
+        if case APIError.serverError(let code, _) = error {
+            switch code {
+            case 409:           return "Un compte existe déjà avec cet email"
+            case 500, 502, 503: return "Une erreur est survenue. Veuillez réessayer."
+            default:            break
+            }
+        }
+        return "Une erreur est survenue. Veuillez réessayer."
     }
 }

@@ -46,16 +46,20 @@ final class KeychainStorage {
         delete(forKey: Keys.userNom)
         delete(forKey: Keys.userPrenom)
         delete(forKey: Keys.tokenExpiry)
+        delete(forKey: Keys.certificationStatus)
+        delete(forKey: Keys.typeAbonnement)
     }
 
     struct Keys {
-        static let accessToken  = "access_token"
-        static let refreshToken = "refresh_token"
-        static let idToken      = "id_token"
-        static let userId       = "user_id"
-        static let userEmail    = "user_email"
-        static let userNom      = "user_nom"
-        static let userPrenom   = "user_prenom"
-        static let tokenExpiry  = "token_expiry"
+        static let accessToken         = "access_token"
+        static let refreshToken        = "refresh_token"
+        static let idToken             = "id_token"
+        static let userId              = "user_id"
+        static let userEmail           = "user_email"
+        static let userNom             = "user_nom"
+        static let userPrenom          = "user_prenom"
+        static let tokenExpiry         = "token_expiry"
+        static let certificationStatus = "certification_status"
+        static let typeAbonnement      = "type_abonnement"
     }
 }

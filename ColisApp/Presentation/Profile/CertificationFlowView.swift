@@ -73,7 +73,7 @@ struct CertificationFlowView: View {
                             }
                             .padding(14)
                             .background(Color.appCanvas)
-                            .cornerRadius(12)
+                            .cornerRadius(13)
                         }
 
                         // ── Ce qui est requis ─────────────
@@ -100,7 +100,7 @@ struct CertificationFlowView: View {
                         }
                         .padding(14)
                         .background(Color.appPrimaryLight)
-                        .cornerRadius(12)
+                        .cornerRadius(13)
 
                         if let error {
                             ErrorBanner(message: error)
@@ -116,7 +116,7 @@ struct CertificationFlowView: View {
                             }
                             .padding(14)
                             .background(Color.appWarningLight)
-                            .cornerRadius(12)
+                            .cornerRadius(13)
                         } else {
                             AppButton(
                                 title:     "Soumettre ma demande",
@@ -134,8 +134,7 @@ struct CertificationFlowView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Fermer") { dismiss() }
-                        .foregroundColor(.appPrimary)
+                    CloseButton { dismiss() }
                 }
             }
         }

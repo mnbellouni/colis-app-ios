@@ -6,7 +6,7 @@ struct MesLivraisonsView: View {
     @EnvironmentObject private var authState: AuthState
 
     @State private var livraisons:    [Livraison] = []
-    @State private var isLoading      = false
+    @State private var isLoading      = true
     @State private var error: String? = nil
     @State private var filtreStatut   = "toutes"
 
@@ -137,8 +137,8 @@ struct LivraisonListCard: View {
         }
         .padding(14)
         .background(Color.appCard)
-        .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.appBorder, lineWidth: 1))
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appBorder, lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 2)
     }
 }
@@ -172,7 +172,7 @@ struct StatutLivraisonBadge: View {
         case "confirme":   return .appSuccess
         case "livre":      return .appSuccess
         case "en_transit": return .appPrimary
-        case "recupere":   return Color(hex: "0EA5E9")
+        case "recupere":   return .appInfo
         case "litige":     return .appError
         default:           return .appTextSecondary
         }

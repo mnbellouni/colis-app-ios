@@ -21,6 +21,11 @@ class AnnonceRepositoryImpl: AnnonceRepository {
     }
 
     func getAnnonces(params: [String: String]) async throws -> [Annonce] {
+        let page: PagedResult<Annonce> = try await getAnnoncesPage(params: params)
+        return page.items
+    }
+
+    func getAnnoncesPage(params: [String: String]) async throws -> PagedResult<Annonce> {
         var url = APIEndpoints.annonces
         if !params.isEmpty {
             let qs = params.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }
@@ -53,6 +58,12 @@ class AnnonceRepositoryImpl: AnnonceRepository {
 
     func toggleActif(id: String) async throws -> Annonce {
         return try await apiClient.put(url: "\(APIEndpoints.annonce(id: id))/actif", body: [:])
+    }
+
+    func changeStatut(id: String, statut: String, conversationId: String?) async throws -> Annonce {
+        var body: [String: Any] = ["statut": statut]
+        if let cid = conversationId { body["conversationId"] = cid }
+        return try await apiClient.put(url: "\(APIEndpoints.annonce(id: id))/statut", body: body)
     }
 
     func getUploadUrl(annonceId: String, contentType: String) async throws -> [String: String] {

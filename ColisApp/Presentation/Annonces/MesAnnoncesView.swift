@@ -11,14 +11,14 @@ struct MesAnnoncesView: View {
     @State private var filtreStatut  = "toutes"
     @State private var annonceToDelete: Annonce? = nil
 
-    let filtres = [("Toutes", "toutes"), ("Actives", "actives"), ("Inactives", "inactives"), ("Fermées", "fermees")]
+    let filtres = [("Toutes", "toutes"), ("Ouvertes", "ouverte"), ("Pourvues", "pourvue"), ("Fermées", "fermee")]
 
     var annoncesFiltered: [Annonce] {
         switch filtreStatut {
-        case "actives":   return annonces.filter { $0.isActive && $0.statut == "ouverte" }
-        case "inactives": return annonces.filter { !$0.isActive }
-        case "fermees":   return annonces.filter { $0.statut != "ouverte" }
-        default:          return annonces
+        case "ouverte": return annonces.filter { $0.statut == "ouverte" }
+        case "pourvue": return annonces.filter { $0.statut == "pourvue" }
+        case "fermee":  return annonces.filter { $0.statut == "fermee" }
+        default:        return annonces
         }
     }
 
@@ -167,7 +167,7 @@ struct MesAnnoncesCard: View {
                 }
                 .buttonStyle(.plain)
 
-                if annonce.statut == "ouverte" || annonce.statut == "annulee" {
+                if annonce.statut == "ouverte" {
                     Button(action: onDelete) {
                         Label("Supprimer", systemImage: "trash")
                             .font(.system(size: 12, weight: .medium))
@@ -182,8 +182,8 @@ struct MesAnnoncesCard: View {
         }
         .padding(14)
         .background(Color.appCard)
-        .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.appBorder, lineWidth: 1))
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appBorder, lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 2)
     }
 }

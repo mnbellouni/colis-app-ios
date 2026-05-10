@@ -257,7 +257,7 @@ struct TrajetCard: View {
                         ForEach(0..<5, id: \.self) { _ in
                             Image(systemName: "star.fill")
                                 .font(.system(size: 9))
-                                .foregroundColor(Color(hex: "F59E0B"))
+                                .foregroundColor(.appWarning)
                         }
                         Text("4.9")
                             .font(.system(size: 11))
@@ -362,7 +362,7 @@ struct TrajetFiltresView: View {
             }
             .background(Color.appBackground)
             .navigationTitle("Filtres avancés").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarLeading) { Button("Fermer") { dismiss() }.foregroundColor(.appPrimary) } }
+            .toolbar { ToolbarItem(placement: .topBarLeading) { CloseButton { dismiss() } } }
         }
     }
 

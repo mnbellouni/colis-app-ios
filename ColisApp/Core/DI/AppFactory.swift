@@ -4,7 +4,8 @@ protocol AppFactory {
     func makeLoginViewModel()           -> LoginViewModel
     func makeRegisterViewModel()        -> RegisterViewModel
     func makeHomeViewModel()            -> HomeViewModel
-    func makeAnnonceDetailViewModel()   -> AnnonceDetailViewModel
+    func makeAnnonceDetailViewModel()    -> AnnonceDetailViewModel
+    func makeAnnonceurProfilViewModel()  -> AnnonceurProfilViewModel
     func makeCreateAnnonceViewModel()   -> CreateAnnonceViewModel
     func makeConversationsViewModel()   -> ConversationsViewModel
     func makeChatViewModel()            -> ChatViewModel
@@ -97,19 +98,31 @@ final class ProductionAppFactory: AppFactory {
     }
 
     func makeHomeViewModel() -> HomeViewModel {
-        HomeViewModel(repository: makeAnnonceRepository(), favorisRepository: makeFavorisRepository())
+        HomeViewModel(repository: makeAnnonceRepository(), favorisRepository: makeFavorisRepository(), paysRepository: makePaysRepository())
     }
 
     func makeAnnonceDetailViewModel() -> AnnonceDetailViewModel {
         AnnonceDetailViewModel(
             annonceRepository:  makeAnnonceRepository(),
             offreRepository:    makeOffreRepository(),
-            favorisRepository:  makeFavorisRepository()
+            favorisRepository:  makeFavorisRepository(),
+            userRepository:     makeUserRepository()
+        )
+    }
+
+    func makeAnnonceurProfilViewModel() -> AnnonceurProfilViewModel {
+        AnnonceurProfilViewModel(
+            userRepository:    makeUserRepository(),
+            annonceRepository: makeAnnonceRepository()
         )
     }
 
     func makeCreateAnnonceViewModel() -> CreateAnnonceViewModel {
-        CreateAnnonceViewModel(repository: makeAnnonceRepository(), trajetRepository: makeTrajetRepository())
+        CreateAnnonceViewModel(
+            repository:        makeAnnonceRepository(),
+            trajetRepository:  makeTrajetRepository(),
+            messageRepository: makeMessageRepository()
+        )
     }
 
     func makeConversationsViewModel() -> ConversationsViewModel {

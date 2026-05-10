@@ -109,7 +109,7 @@ struct ColisCodeView: View {
                 }
                 .padding(16)
                 .background(Color.appPrimaryLight)
-                .cornerRadius(12)
+                .cornerRadius(13)
             }
             .padding(20)
         }
