@@ -423,3 +423,10 @@ struct PagedResult<T: Codable>: Codable {
     let items: [T]
     let nextToken: String?
 }
+
+struct UploadUrlResponse: Decodable {
+    let uploadUrl: String
+    let photoUrl: String
+    let key: String
+    let expiresIn: Int
+}

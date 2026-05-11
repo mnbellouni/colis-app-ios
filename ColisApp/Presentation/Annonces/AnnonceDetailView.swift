@@ -11,12 +11,16 @@ struct AnnonceDetailView: View {
     @StateObject private var vmHolder = VMHolder<AnnonceDetailViewModel>()
     private var vm: AnnonceDetailViewModel? { vmHolder.vm }
 
-    @State private var showOffreSheet    = false
-    @State private var showLogin         = false
-    @State private var showLoginFavori   = false
-    @State private var certificationError: String? = nil
-    @State private var showFermerAlert   = false
-    @State private var showPourvueSheet  = false
+    @State private var showOffreSheet          = false
+    @State private var showLogin               = false
+    @State private var showLoginFavori         = false
+    @State private var showCertificationAlert  = false
+    @State private var showTrajetAlert         = false
+    @State private var showCertificationSheet  = false
+    @State private var showCreateTrajetSheet   = false
+    @State private var showChat                = false
+    @State private var showFermerAlert         = false
+    @State private var showPourvueSheet        = false
 
     var body: some View {
         ScrollView {
@@ -200,10 +204,12 @@ struct AnnonceDetailView: View {
         }
         .sheet(isPresented: $showLogin) {
             AuthNavigationView(onAuthenticated: {
-                if authState.certificationStatus == "verifie" {
-                    showOffreSheet = true
+                if authState.certificationStatus != "verifie" {
+                    showCertificationAlert = true
+                } else if vm?.userHasTrajets != true {
+                    showTrajetAlert = true
                 } else {
-                    certificationError = "Vous devez être certifié pour faire une offre. Complétez votre certification depuis votre profil."
+                    showOffreSheet = true
                 }
             })
         }
@@ -216,10 +222,36 @@ struct AnnonceDetailView: View {
                 }
             })
         }
-        .alert("Certification requise", isPresented: .constant(certificationError != nil)) {
-            Button("OK") { certificationError = nil }
+        .sheet(isPresented: $showCertificationSheet) {
+            CertificationFlowView(
+                accountNom:    authState.userNom    ?? "",
+                accountPrenom: authState.userPrenom ?? "",
+                source:        "annonce_detail"
+            )
+        }
+        .sheet(isPresented: $showCreateTrajetSheet) {
+            CreateTrajetView(vm: factory.makeTrajetViewModel())
+        }
+        .navigationDestination(isPresented: $showChat) {
+            if let annonce = vm?.annonce {
+                ChatView(
+                    conversationId: [authState.userId ?? "", annonce.demandeurId]
+                        .sorted().joined(separator: "_"),
+                    autreUserId: annonce.demandeurId
+                )
+            }
+        }
+        .alert("Certification requise", isPresented: $showCertificationAlert) {
+            Button("Me certifier") { showCertificationSheet = true }
+            Button("Annuler", role: .cancel) {}
         } message: {
-            if let e = certificationError { Text(e) }
+            Text("Vous devez être certifié pour faire une offre ou contacter un annonceur.")
+        }
+        .alert("Trajet requis", isPresented: $showTrajetAlert) {
+            Button("Créer un trajet") { showCreateTrajetSheet = true }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("Vous devez avoir un trajet actif pour faire une offre ou contacter un annonceur.")
         }
         .alert("Fermer l'annonce", isPresented: $showFermerAlert) {
             Button("Fermer", role: .destructive) {
@@ -420,6 +452,7 @@ struct AnnonceDetailView: View {
         let isOwner     = annonce.demandeurId == authState.userId
         let isOuverte   = annonce.statut == "ouverte"
         let isCertified = authState.certificationStatus == "verifie"
+        let hasTrajets  = vm?.userHasTrajets == true
 
         if isOwner {
             if isOuverte {
@@ -445,19 +478,23 @@ struct AnnonceDetailView: View {
         } else if isOuverte {
             if authState.isLoggedIn {
                 AppButton(title: "Faire une offre") {
-                    if isCertified {
-                        showOffreSheet = true
+                    if !isCertified {
+                        showCertificationAlert = true
+                    } else if !hasTrajets {
+                        showTrajetAlert = true
                     } else {
-                        certificationError = "Vous devez être certifié pour faire une offre. Complétez votre certification depuis votre profil."
+                        showOffreSheet = true
                     }
                 }
 
-                NavigationLink {
-                    ChatView(
-                        conversationId: [authState.userId ?? "", annonce.demandeurId]
-                            .sorted().joined(separator: "_"),
-                        autreUserId: annonce.demandeurId
-                    )
+                Button {
+                    if !isCertified {
+                        showCertificationAlert = true
+                    } else if !hasTrajets {
+                        showTrajetAlert = true
+                    } else {
+                        showChat = true
+                    }
                 } label: {
                     HStack {
                         Spacer()
@@ -465,16 +502,16 @@ struct AnnonceDetailView: View {
                         Text("Contacter l'annonceur").font(.system(size: 16, weight: .semibold))
                         Spacer()
                     }
-                    .foregroundColor(isCertified ? .appPrimary : .appTextTertiary)
+                    .foregroundColor(.appPrimary)
                     .frame(height: 52)
-                    .background(isCertified ? Color.appCard : Color.appBackground)
+                    .background(Color.appCard)
                     .cornerRadius(13)
                     .overlay(
                         RoundedRectangle(cornerRadius: 13)
-                            .stroke(isCertified ? Color.appPrimary : Color.appBorder, lineWidth: 1.5)
+                            .stroke(Color.appPrimary, lineWidth: 1.5)
                     )
                 }
-                .disabled(!isCertified)
+                .buttonStyle(.plain)
             } else {
                 AppButton(title: "Connectez-vous pour faire une offre", action: { showLogin = true }, style: .secondary)
             }

@@ -9,11 +9,12 @@ struct CreateOffreView: View {
     let annonceId: String
     @ObservedObject var vm: AnnonceDetailViewModel
 
-    @State private var message      = ""
-    @State private var prix         = ""
-    @State private var trajets:     [Trajet] = []
-    @State private var trajetId     = ""
+    @State private var message        = ""
+    @State private var prix           = ""
+    @State private var trajets:       [Trajet] = []
+    @State private var trajetId       = ""
     @State private var loadingTrajets = false
+    @State private var isSubmitting   = false
 
     var trajetSelectionne: Trajet? {
         trajets.first { $0.id == trajetId }
@@ -98,24 +99,48 @@ struct CreateOffreView: View {
                         ErrorBanner(message: error)
                     }
 
-                    AppButton(
-                        title:     "Envoyer l'offre",
-                        action: {
-                            guard !trajetId.isEmpty else { return }
-                            Task {
-                                await vm.envoyerOffre(
-                                    annonceId:    annonceId,
-                                    trajetId:     trajetId,
-                                    message:      message,
-                                    fraisService: Double(prix) ?? 0,
-                                    userId:       authState.userId ?? ""
-                                )
-                                dismiss()
+                    if trajets.isEmpty && !loadingTrajets {
+                        VStack(spacing: 10) {
+                            Text("Vous devez avoir un trajet actif pour faire une offre.")
+                                .font(.system(size: 14))
+                                .foregroundColor(.appTextSecondary)
+                                .multilineTextAlignment(.center)
+                            NavigationLink(destination: CreateTrajetView(vm: factory.makeTrajetViewModel())) {
+                                Text("Créer un trajet")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.appPrimary)
                             }
-                        },
-                        isLoading: vm.isLoading
-                    )
-                    .disabled(trajetId.isEmpty || prix.isEmpty || message.isEmpty)
+                        }
+                        .padding(.vertical, 8)
+                    } else {
+                        AppButton(
+                            title:     "Envoyer l'offre",
+                            action: {
+                                guard !trajetId.isEmpty else { return }
+                                isSubmitting = true
+                                Task {
+                                    await vm.envoyerOffre(
+                                        annonceId:    annonceId,
+                                        trajetId:     trajetId,
+                                        message:      message,
+                                        fraisService: Double(prix) ?? 0,
+                                        userId:       authState.userId ?? ""
+                                    )
+                                    isSubmitting = false
+                                    if vm.offreEnvoyee { dismiss() }
+                                }
+                            },
+                            isLoading: isSubmitting
+                        )
+                        .disabled(trajetId.isEmpty || prix.isEmpty || message.isEmpty)
+
+                        if !trajetId.isEmpty && (prix.isEmpty || message.isEmpty) {
+                            Text("Remplissez le prix et le message pour continuer.")
+                                .font(.system(size: 12))
+                                .foregroundColor(.appTextTertiary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
                 }
                 .padding(20)
             }
@@ -129,6 +154,8 @@ struct CreateOffreView: View {
             }
         }
         .task {
+            vm.error = nil
+            vm.offreEnvoyee = false
             loadingTrajets = true
             trajets = (try? await factory.makeTrajetRepository().getMesTrajets()) ?? []
             if let premier = trajets.first { trajetId = premier.id }

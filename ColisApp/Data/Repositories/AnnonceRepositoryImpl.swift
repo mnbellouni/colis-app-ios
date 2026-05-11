@@ -66,7 +66,7 @@ class AnnonceRepositoryImpl: AnnonceRepository {
         return try await apiClient.put(url: "\(APIEndpoints.annonce(id: id))/statut", body: body)
     }
 
-    func getUploadUrl(annonceId: String, contentType: String) async throws -> [String: String] {
+    func getUploadUrl(annonceId: String, contentType: String) async throws -> UploadUrlResponse {
         let url = "\(APIEndpoints.annonceUploadUrl(id: annonceId))?contentType=\(contentType)"
         return try await apiClient.get(url: url)
     }

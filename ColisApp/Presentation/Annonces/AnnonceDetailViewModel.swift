@@ -8,28 +8,32 @@ final class AnnonceDetailViewModel: ObservableObject {
     private let offreRepository:    any OffreRepository
     private let favorisRepository:  any FavorisRepository
     private let userRepository:     any UserRepository
+    private let trajetRepository:   any TrajetRepository
 
     init(
         annonceRepository:  any AnnonceRepository,
         offreRepository:    any OffreRepository,
         favorisRepository:  any FavorisRepository,
-        userRepository:     any UserRepository
+        userRepository:     any UserRepository,
+        trajetRepository:   any TrajetRepository
     ) {
         self.annonceRepository  = annonceRepository
         self.offreRepository    = offreRepository
         self.favorisRepository  = favorisRepository
         self.userRepository     = userRepository
+        self.trajetRepository   = trajetRepository
     }
 
-    @Published var annonce:            Annonce?         = nil
-    @Published var annonceur:          User?            = nil
+    @Published var annonce:              Annonce?         = nil
+    @Published var annonceur:            User?            = nil
     @Published var evaluationsAnnonceur: EvaluationResult? = nil
-    @Published var offres:             [Offre]          = []
-    @Published var isFavori:           Bool             = false
-    @Published var isLoading           = false
-    @Published var offreEnvoyee        = false
-    @Published var statutChange        = false
-    @Published var error: String?      = nil
+    @Published var offres:               [Offre]          = []
+    @Published var isFavori:             Bool             = false
+    @Published var userHasTrajets:       Bool             = false
+    @Published var isLoading             = false
+    @Published var offreEnvoyee          = false
+    @Published var statutChange          = false
+    @Published var error: String?        = nil
 
     func load(id: String, isLoggedIn: Bool = false) async {
         isLoading = true
@@ -43,8 +47,10 @@ final class AnnonceDetailViewModel: ObservableObject {
             self.error = error.localizedDescription
         }
         if isLoggedIn {
-            isFavori = (try? await favorisRepository.isFavori(annonceId: id)) ?? false
-            offres   = (try? await offreRepository.getOffres(annonceId: id)) ?? []
+            isFavori       = (try? await favorisRepository.isFavori(annonceId: id)) ?? false
+            offres         = (try? await offreRepository.getOffres(annonceId: id)) ?? []
+            let trajets    = (try? await trajetRepository.getMesTrajets()) ?? []
+            userHasTrajets = !trajets.isEmpty
         }
         isLoading = false
     }

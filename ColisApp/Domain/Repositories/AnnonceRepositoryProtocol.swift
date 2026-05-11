@@ -11,6 +11,6 @@ protocol AnnonceRepository {
     func deleteAnnonce(id: String) async throws
     func toggleActif(id: String) async throws -> Annonce
     func changeStatut(id: String, statut: String, conversationId: String?) async throws -> Annonce
-    func getUploadUrl(annonceId: String, contentType: String) async throws -> [String: String]
+    func getUploadUrl(annonceId: String, contentType: String) async throws -> UploadUrlResponse
     func addPhoto(annonceId: String, photoUrl: String) async throws -> [String: [String]]
 }

@@ -143,7 +143,7 @@ struct CreateAnnonceView: View {
                 case 0: stepType
                 case 1: stepColis
                 case 2: stepContacts
-                case 3: stepCodeSuivi
+                case 3: stepOptions
                 default: EmptyView()
                 }
 
@@ -181,6 +181,12 @@ struct CreateAnnonceView: View {
                             },
                             isLoading: vm?.isLoading ?? false
                         )
+                        if vm?.isLoading == true {
+                            Text("Recherche de transporteurs compatibles…")
+                                .font(.system(size: 12))
+                                .foregroundColor(.appTextTertiary)
+                                .multilineTextAlignment(.center)
+                        }
                     }
                 }
             }
@@ -409,42 +415,103 @@ struct CreateAnnonceView: View {
         }
     }
 
-    // ── Écran 4 : Code de suivi ───────────────────────────
-    private var stepCodeSuivi: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Option code de suivi")
+    // ── Écran 4 : Options de publication ─────────────────
+    private var stepOptions: some View {
+        let codeSuivi = vm?.avecCodeSuivi ?? false
+        let boost     = vm?.avecBoost     ?? false
+        let total     = (codeSuivi ? 0.99 : 0) + (boost ? 0.99 : 0)
+
+        return VStack(alignment: .leading, spacing: 16) {
+            Text("Options de publication")
                 .font(.system(size: 20, weight: .bold)).foregroundColor(.appTextPrimary)
-            Text("Cette option ne peut pas être activée après la publication.")
+            Text("Ces options ne peuvent pas être activées après la publication.")
                 .font(.system(size: 13)).foregroundColor(.appTextSecondary)
 
-            VStack(alignment: .leading, spacing: 10) {
-                Toggle(isOn: Binding(get: { vm?.avecCodeSuivi ?? false }, set: { vm?.avecCodeSuivi = $0 })) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Label("Code de suivi", systemImage: "qrcode")
-                                .font(.system(size: 15, weight: .medium)).foregroundColor(.appTextPrimary)
-                            Text("0,99 €")
-                                .font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background(Color.appPrimary).cornerRadius(99)
+            // ── Code de suivi ─────────────────────────────
+            optionToggle(
+                icon:      "qrcode",
+                titre:     "Code de suivi",
+                detail:    "Code unique lié à votre colis. Suivi à chaque étape.",
+                prix:      "0,99 €",
+                isOn:      Binding(get: { vm?.avecCodeSuivi ?? false }, set: { vm?.avecCodeSuivi = $0 })
+            )
+
+            // ── Boost ─────────────────────────────────────
+            optionToggle(
+                icon:    "bolt.fill",
+                titre:   "Booster l'annonce",
+                detail:  "Maximisez vos chances de trouver un transporteur rapidement.",
+                prix:    "0,99 €",
+                isOn:    Binding(get: { vm?.avecBoost ?? false }, set: { vm?.avecBoost = $0 }),
+                bullets: [
+                    "Votre annonce remonte en tête de la liste publique dès la publication.",
+                    "Les transporteurs Premium et PRO avec un trajet compatible sont contactés automatiquement.",
+                    "Matching continu : tout nouveau trajet compatible créé après votre annonce déclenche un contact automatique."
+                ]
+            )
+
+            // ── Total si au moins une option ──────────────
+            if total > 0 {
+                HStack {
+                    Spacer()
+                    Text("Total : \(String(format: "%.2f", total).replacingOccurrences(of: ".", with: ",")) €")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.appTextSecondary)
+                }
+            }
+        }
+    }
+
+    private func optionToggle(
+        icon:    String,
+        titre:   String,
+        detail:  String,
+        prix:    String,
+        isOn:    Binding<Bool>,
+        bullets: [String] = []
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: isOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Label(titre, systemImage: icon)
+                            .font(.system(size: 15, weight: .medium)).foregroundColor(.appTextPrimary)
+                        Text(prix)
+                            .font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Color.appPrimary).cornerRadius(99)
+                    }
+                    Text(detail)
+                        .font(.system(size: 12)).foregroundColor(.appTextSecondary)
+                }
+            }
+            .tint(.appPrimary)
+
+            if !bullets.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(bullets, id: \.self) { bullet in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 12)).foregroundColor(.appPrimary)
+                                .padding(.top, 1)
+                            Text(bullet)
+                                .font(.system(size: 12)).foregroundColor(.appTextSecondary)
                         }
-                        Text("Code unique lié à votre colis. Suivi à chaque étape.")
-                            .font(.system(size: 12)).foregroundColor(.appTextSecondary)
                     }
                 }
-                .tint(.appPrimary)
+                .padding(.top, 2)
             }
-            .padding(14).background(Color.appPrimaryLight).cornerRadius(13)
         }
+        .padding(14)
+        .background(Color.appPrimaryLight)
+        .cornerRadius(13)
     }
 }
 
-// ── Écran 5 : Trajets compatibles post-publication ────────
+// ── Écran 5 : Transporteurs contactés post-publication ───────
 
 struct TrajetsCompatiblesView: View {
 
-    @EnvironmentObject private var authState: AuthState
-    @Environment(\.factory)        private var factory
     @ObservedObject var vm: CreateAnnonceViewModel
     let onDismiss: () -> Void
 
@@ -452,101 +519,69 @@ struct TrajetsCompatiblesView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "airplane.circle.fill")
-                            .font(.system(size: 52)).foregroundColor(.appPrimary)
-                        Text("Des transporteurs sont disponibles !")
-                            .font(.system(size: 20, weight: .bold)).foregroundColor(.appTextPrimary)
-                            .multilineTextAlignment(.center)
-                        Text("Ces voyageurs font déjà le trajet. Voulez-vous leur envoyer une demande ?")
+
+                    // ── En-tête succès ────────────────────
+                    VStack(spacing: 10) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 56)).foregroundColor(.appSuccess)
+                        Text("Annonce publiée !")
+                            .font(.system(size: 22, weight: .bold)).foregroundColor(.appTextPrimary)
+                        let n = vm.trajetsCompatibles.count
+                        Text("\(n) transporteur\(n > 1 ? "s ont été contactés" : " a été contacté") automatiquement.")
                             .font(.system(size: 14)).foregroundColor(.appTextSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, 10)
 
-                    ForEach(vm.trajetsCompatibles) { trajet in
-                        TrajetSelectableCard(
-                            trajet:   trajet,
-                            selected: vm.trajetsSelectionnes.contains(trajet.id)
-                        ) {
-                            if vm.trajetsSelectionnes.contains(trajet.id) {
-                                vm.trajetsSelectionnes.remove(trajet.id)
-                            } else {
-                                vm.trajetsSelectionnes.insert(trajet.id)
-                            }
+                    // ── Liste des transporteurs contactés ─
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Transporteurs contactés")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.appTextSecondary)
+                        ForEach(vm.trajetsCompatibles) { trajet in
+                            TrajetContacteCard(trajet: trajet)
                         }
                     }
 
-                    if vm.demandesEnvoyees {
-                        VStack(spacing: 12) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 44)).foregroundColor(.appSuccess)
-                            Text("Vos demandes ont été envoyées !")
-                                .font(.system(size: 18, weight: .bold)).foregroundColor(.appTextPrimary)
-                            Text("Retrouvez les réponses dans vos messages.")
-                                .font(.system(size: 14)).foregroundColor(.appTextSecondary)
-                            AppButton(title: "Retour à l'accueil", action: onDismiss)
-                        }
-                        .padding(.top, 20)
-                    } else {
-                        VStack(spacing: 12) {
-                            AppButton(title: "Contacter les transporteurs sélectionnés",
-                                      action: {
-                                Task {
-                                    await vm.envoyerDemandes(
-                                        annonceId: vm.annonce?.id ?? "",
-                                        userId: authState.userId ?? ""
-                                    )
-                                }
-                            }, isLoading: vm.isLoading)
-                            .disabled(vm.trajetsSelectionnes.isEmpty)
+                    Text("Vous recevrez leurs réponses dans vos messages.")
+                        .font(.system(size: 13))
+                        .foregroundColor(.appTextTertiary)
+                        .multilineTextAlignment(.center)
 
-                            Button("Non merci, voir mon annonce") { onDismiss() }
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.appTextSecondary)
-                        }
-                    }
+                    AppButton(title: "OK, voir mon annonce", action: onDismiss)
                 }
                 .padding(20)
             }
             .background(Color.appBackground)
-            .navigationTitle("Transporteurs disponibles")
+            .navigationTitle("Transporteurs contactés")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
 
-struct TrajetSelectableCard: View {
-    let trajet:   Trajet
-    let selected: Bool
-    let action:   () -> Void
+struct TrajetContacteCard: View {
+    let trajet: Trajet
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundColor(selected ? .appPrimary : .appTextTertiary)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(trajet.villeDepart) → \(trajet.villeArrivee)")
-                        .font(.system(size: 14, weight: .semibold)).foregroundColor(.appTextPrimary)
-                    Text(String(trajet.dateDepart.prefix(10)))
-                        .font(.system(size: 12)).foregroundColor(.appTextSecondary)
-                    if let prix = trajet.prixParKg {
-                        Text("\(String(format: "%.2f", prix)) €/kg")
-                            .font(.system(size: 12, weight: .medium)).foregroundColor(.appPrimary)
-                    }
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 20)).foregroundColor(.appSuccess)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(trajet.villeDepart) → \(trajet.villeArrivee)")
+                    .font(.system(size: 14, weight: .semibold)).foregroundColor(.appTextPrimary)
+                Text(String(trajet.dateDepart.prefix(10)))
+                    .font(.system(size: 12)).foregroundColor(.appTextSecondary)
+                if let prix = trajet.prixParKg {
+                    Text("\(String(format: "%.2f", prix)) €/kg")
+                        .font(.system(size: 12, weight: .medium)).foregroundColor(.appPrimary)
                 }
-                Spacer()
             }
-            .padding(14)
-            .background(Color.appCard)
-            .cornerRadius(13)
-            .overlay(RoundedRectangle(cornerRadius: 13)
-                .stroke(selected ? Color.appPrimary : Color.appBorder,
-                        lineWidth: selected ? 2 : 1))
+            Spacer()
         }
-        .buttonStyle(.plain)
+        .padding(14)
+        .background(Color.appCard)
+        .cornerRadius(13)
+        .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1))
     }
 }
 

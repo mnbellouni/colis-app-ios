@@ -106,7 +106,8 @@ final class ProductionAppFactory: AppFactory {
             annonceRepository:  makeAnnonceRepository(),
             offreRepository:    makeOffreRepository(),
             favorisRepository:  makeFavorisRepository(),
-            userRepository:     makeUserRepository()
+            userRepository:     makeUserRepository(),
+            trajetRepository:   makeTrajetRepository()
         )
     }
 

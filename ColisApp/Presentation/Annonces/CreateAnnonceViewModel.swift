@@ -22,7 +22,6 @@ final class CreateAnnonceViewModel: ObservableObject {
     @Published var annonce: Annonce?     = nil
     @Published var error: String?        = nil
     @Published var trajetsCompatibles:   [Trajet] = []
-    @Published var trajetsSelectionnes:  Set<String> = []
     @Published var demandesEnvoyees      = false
 
     @Published var type              = "transport"
@@ -45,6 +44,7 @@ final class CreateAnnonceViewModel: ObservableObject {
     @Published var nomDestinataire   = ""
     @Published var prenomDestinataire = ""
     @Published var avecCodeSuivi     = false
+    @Published var avecBoost         = false
 
     var dateLimiteISO: String {
         let f = ISO8601DateFormatter()
@@ -82,10 +82,15 @@ final class CreateAnnonceViewModel: ObservableObject {
                 "adresseArrivee":     adresseArrivee,
                 "nomDestinataire":    nomDestinataire,
                 "prenomDestinataire": prenomDestinataire,
-                "avecCodeSuivi":      avecCodeSuivi
+                "avecCodeSuivi":      avecCodeSuivi,
+                "avecBoost":          avecBoost
             ])
             await loadTrajetsCompatibles()
-            if trajetsCompatibles.isEmpty { isSuccess = true }
+            if let annonceId = annonce?.id, !trajetsCompatibles.isEmpty {
+                await contacterTrajetsCompatibles(annonceId: annonceId)
+            } else {
+                isSuccess = true
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -94,41 +99,35 @@ final class CreateAnnonceViewModel: ObservableObject {
 
     private func loadTrajetsCompatibles() async {
         guard !villeDepart.isEmpty, !villeArrivee.isEmpty else { return }
-        let items = (try? await trajetRepository.getTrajets(
+        trajetsCompatibles = (try? await trajetRepository.getTrajets(
             villeDepart: villeDepart,
             villeArrivee: villeArrivee,
-            statut: "ouvert"
+            statut: "ouvert",
+            typeAbonnement: "premium,pro"
         )) ?? []
-        trajetsCompatibles  = items
-        trajetsSelectionnes = Set(items.map { $0.id })
+    }
+
+    private func contacterTrajetsCompatibles(annonceId: String) async {
+        for trajet in trajetsCompatibles {
+            _ = try? await messageRepository.sendMessage(
+                destinataireId: trajet.voyageurId,
+                contenu: "Bonjour, votre trajet correspond à mon annonce. Seriez-vous disponible pour transporter mon colis ?",
+                annonceId: annonceId
+            )
+        }
+        demandesEnvoyees = true
     }
 
     func uploadPhotos(_ images: [UIImage], annonceId: String) async {
         for image in images.prefix(2) {
             guard let data = image.jpegData(compressionQuality: 0.85) else { continue }
             guard let urls = try? await repository.getUploadUrl(annonceId: annonceId, contentType: "image/jpeg"),
-                  let uploadUrl = urls["uploadUrl"],
-                  let photoUrl  = urls["photoUrl"] else { continue }
-            var req = URLRequest(url: URL(string: uploadUrl)!)
+                  let uploadURL = URL(string: urls.uploadUrl) else { continue }
+            var req = URLRequest(url: uploadURL)
             req.httpMethod = "PUT"
             req.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
             _ = try? await URLSession.shared.upload(for: req, from: data)
-            _ = try? await repository.addPhoto(annonceId: annonceId, photoUrl: photoUrl)
+            _ = try? await repository.addPhoto(annonceId: annonceId, photoUrl: urls.photoUrl)
         }
-    }
-
-    func envoyerDemandes(annonceId: String, userId: String) async {
-        isLoading = true
-        let ids = trajetsSelectionnes
-        for trajet in trajetsCompatibles where ids.contains(trajet.id) {
-            let contenu = "Bonjour, j'ai publié une annonce de transport et je souhaite vous proposer mon colis. Seriez-vous disponible ?"
-            _ = try? await messageRepository.sendMessage(
-                destinataireId: trajet.voyageurId,
-                contenu: contenu,
-                annonceId: annonceId
-            )
-        }
-        isLoading = false
-        demandesEnvoyees = true
     }
 }

@@ -128,9 +128,10 @@ final class TrajetViewModel: ObservableObject {
         error     = nil
         do {
             trajets = try await repository.getTrajets(
-                villeDepart:  villeDepart,
-                villeArrivee: villeArrivee,
-                statut:       nil
+                villeDepart:     villeDepart,
+                villeArrivee:    villeArrivee,
+                statut:          nil,
+                typeAbonnement:  nil
             )
         } catch {
             self.error = error.localizedDescription

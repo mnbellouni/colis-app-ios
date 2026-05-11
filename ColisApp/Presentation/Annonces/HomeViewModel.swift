@@ -143,7 +143,7 @@ final class HomeViewModel: ObservableObject {
         if !filtreVilleDepart.isEmpty       { p["villeDepart"] = filtreVilleDepart }
         if !filtrePaysArrivee.isEmpty       { p["paysArrivee"] = filtrePaysArrivee.sorted().joined(separator: ",") }
         if !filtreVilleArrivee.isEmpty      { p["villeArrivee"] = filtreVilleArrivee }
-        if filtreUrgence                    { p["priorite"]    = "urgent" }
+        if filtreUrgence                    { p["tag"]         = "urgent" }
         return p
     }
 

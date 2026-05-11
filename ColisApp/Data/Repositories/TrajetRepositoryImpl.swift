@@ -10,12 +10,13 @@ final class TrajetRepositoryImpl: TrajetRepository {
         self.keychainStorage  = keychainStorage
     }
 
-    func getTrajets(villeDepart: String? = nil, villeArrivee: String? = nil, statut: String? = nil) async throws -> [Trajet] {
+    func getTrajets(villeDepart: String? = nil, villeArrivee: String? = nil, statut: String? = nil, typeAbonnement: String? = nil) async throws -> [Trajet] {
         var url = APIEndpoints.trajets
         var params: [String] = []
-        if let vd = villeDepart  { params.append("villeDepart=\(vd.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? vd)") }
-        if let va = villeArrivee { params.append("villeArrivee=\(va.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? va)") }
-        if let s  = statut       { params.append("statut=\(s)") }
+        if let vd = villeDepart       { params.append("villeDepart=\(vd.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? vd)") }
+        if let va = villeArrivee      { params.append("villeArrivee=\(va.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? va)") }
+        if let s  = statut            { params.append("statut=\(s)") }
+        if let ta = typeAbonnement    { params.append("typeAbonnement=\(ta)") }
         if !params.isEmpty { url += "?" + params.joined(separator: "&") }
         return try await apiClient.get(url: url, requiresAuth: false)
     }
