@@ -7,6 +7,7 @@ struct User: Identifiable {
     let nom: String
     let prenom: String
     let telephone: String
+    let telephoneVerifie: Bool
     let photo: String
     let bio: String
     let typeAbonnement: String?
@@ -26,7 +27,7 @@ struct User: Identifiable {
 
 extension User: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, email, nom, prenom, telephone, photo, bio
+        case id, email, nom, prenom, telephone, telephoneVerifie, photo, bio
         case typeAbonnement, noteVoyageur, noteExpediteur
         case nbLivraisons, verified, actif, certificationStatus, createdAt
     }
@@ -38,6 +39,7 @@ extension User: Codable {
         nom                 = try  c.decode(String.self, forKey: .nom)
         prenom              = try  c.decode(String.self, forKey: .prenom)
         telephone           = (try? c.decodeIfPresent(String.self, forKey: .telephone)) ?? ""
+        telephoneVerifie    = (try? c.decodeIfPresent(Bool.self,   forKey: .telephoneVerifie)) ?? false
         photo               = (try? c.decodeIfPresent(String.self, forKey: .photo)) ?? ""
         bio                 = (try? c.decodeIfPresent(String.self, forKey: .bio)) ?? ""
         typeAbonnement      = try? c.decodeIfPresent(String.self, forKey: .typeAbonnement)
@@ -57,6 +59,7 @@ extension User: Codable {
         try c.encode(nom,                 forKey: .nom)
         try c.encode(prenom,              forKey: .prenom)
         try c.encode(telephone,           forKey: .telephone)
+        try c.encode(telephoneVerifie,    forKey: .telephoneVerifie)
         try c.encode(photo,               forKey: .photo)
         try c.encode(bio,                 forKey: .bio)
         try c.encodeIfPresent(typeAbonnement, forKey: .typeAbonnement)

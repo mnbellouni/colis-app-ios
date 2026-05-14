@@ -43,7 +43,7 @@ final class CreateAnnonceViewModel: ObservableObject {
     @Published var adresseArrivee    = ""
     @Published var nomDestinataire   = ""
     @Published var prenomDestinataire = ""
-    @Published var avecCodeSuivi     = false
+    @Published var avecCodeSecret    = true
     @Published var avecBoost         = false
 
     var dateLimiteISO: String {
@@ -82,7 +82,7 @@ final class CreateAnnonceViewModel: ObservableObject {
                 "adresseArrivee":     adresseArrivee,
                 "nomDestinataire":    nomDestinataire,
                 "prenomDestinataire": prenomDestinataire,
-                "avecCodeSuivi":      avecCodeSuivi,
+                "avecCodeSecret":     avecCodeSecret,
                 "avecBoost":          avecBoost
             ])
             await loadTrajetsCompatibles()
@@ -103,7 +103,7 @@ final class CreateAnnonceViewModel: ObservableObject {
             villeDepart: villeDepart,
             villeArrivee: villeArrivee,
             statut: "ouvert",
-            typeAbonnement: "premium,pro"
+            typeAbonnement: nil
         )) ?? []
     }
 

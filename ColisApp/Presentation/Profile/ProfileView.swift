@@ -8,10 +8,12 @@ struct ProfileView: View {
     @StateObject private var vmHolder = VMHolder<ProfileViewModel>()
     private var vm: ProfileViewModel? { vmHolder.vm }
 
-    @State private var showEdit           = false
-    @State private var showCertification  = false
-    @State private var certificationStatus      = "non_soumis"
+    @State private var showEdit                     = false
+    @State private var showCertification            = false
+    @State private var showCreateTrajet             = false
+    @State private var certificationStatus          = "non_soumis"
     @State private var certificationRejectionReason = ""
+    @State private var trajetUtilises               = 0
 
     var body: some View {
         NavigationStack {
@@ -114,6 +116,64 @@ struct ProfileView: View {
                     .padding(.horizontal, 18)
                     .padding(.bottom, 16)
 
+                    // ── ÉTAT DE MON COMPTE ────────────────
+                    SectionHeader(title: "ÉTAT DE MON COMPTE")
+
+                    VStack(spacing: 0) {
+                        let identityVerified = normalizedStatus == "verifie" || normalizedStatus == "verified"
+
+                        // Téléphone
+                        ProfileStatusRow(
+                            icon: "phone.fill",
+                            label: "Téléphone vérifié",
+                            isVerified: vm?.user?.telephoneVerifie ?? false,
+                            subtitle: nil,
+                            ctaLabel: nil,
+                            action: nil
+                        )
+
+                        Divider().padding(.leading, 66)
+
+                        // Identité
+                        ProfileStatusRow(
+                            icon: "checkmark.shield.fill",
+                            label: "Identité vérifiée",
+                            isVerified: identityVerified,
+                            subtitle: nil,
+                            ctaLabel: identityVerified ? nil : "Vérifier",
+                            action: identityVerified ? nil : { showCertification = true }
+                        )
+
+                        Divider().padding(.leading, 66)
+
+                        // Trajets actifs
+                        ProfileStatusRow(
+                            icon: "map.fill",
+                            label: "Trajets actifs ce mois",
+                            isVerified: false,
+                            subtitle: "\(trajetUtilises) / 2",
+                            ctaLabel: "+",
+                            action: { showCreateTrajet = true }
+                        )
+
+                        Divider().padding(.leading, 66)
+
+                        // Livraisons avec code
+                        ProfileStatusRow(
+                            icon: "lock.shield.fill",
+                            label: "Livraisons avec code",
+                            isVerified: (vm?.user?.nbLivraisons ?? 0) > 0,
+                            subtitle: "\(Int(vm?.user?.nbLivraisons ?? 0))",
+                            ctaLabel: nil,
+                            action: nil
+                        )
+                    }
+                    .background(Color.appCard)
+                    .cornerRadius(16)
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appBorder, lineWidth: 1))
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 16)
+
                     // ── MON COMPTE ────────────────────────
                     SectionHeader(title: "MON COMPTE")
 
@@ -180,18 +240,26 @@ struct ProfileView: View {
                     isAlreadyVerified: vm?.user?.verified ?? false
                 )
             }
+            .sheet(isPresented: $showCreateTrajet) {
+                CreateTrajetView(vm: factory.makeTrajetViewModel())
+            }
             .refreshable {
                 await vm?.loadProfile(userId: authState.userId ?? "")
                 await loadCertificationStatus()
+                await loadTrajetLimit()
             }
             .onChange(of: showCertification) {
                 if !showCertification { Task { await loadCertificationStatus() } }
+            }
+            .onChange(of: showCreateTrajet) {
+                if !showCreateTrajet { Task { await loadTrajetLimit() } }
             }
         }
         .task {
             vmHolder.vm = factory.makeProfileViewModel()
             await vm?.loadProfile(userId: authState.userId ?? "")
             await loadCertificationStatus()
+            await loadTrajetLimit()
         }
     }
 
@@ -264,6 +332,20 @@ struct ProfileView: View {
         case "pro":     return "PRO · 29,99 €/mois"
         default:        return "Standard · Gratuit"
         }
+    }
+
+    private func loadTrajetLimit() async {
+        guard authState.isLoggedIn,
+              let token = KeychainStorage().get(forKey: KeychainStorage.Keys.accessToken),
+              let url   = URL(string: APIEndpoints.trajetsLimit) else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (200...299).contains((response as? HTTPURLResponse)?.statusCode ?? 0),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+        trajetUtilises = (json["utilises"] as? Int) ?? 0
     }
 
     private func loadCertificationStatus() async {
@@ -415,6 +497,65 @@ struct AbonnementView: View {
         .background(Color.appBackground)
         .navigationTitle("Mon abonnement")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// ── Status Row ────────────────────────────────────────────
+struct ProfileStatusRow: View {
+    let icon:      String
+    let label:     String
+    let isVerified: Bool
+    let subtitle:  String?       // valeur affichée sous le label
+    let ctaLabel:  String?       // nil = pas de bouton ; "Vérifier", "+" etc.
+    let action:    (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill((isVerified ? Color.appSuccess : Color.appTextTertiary).opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(isVerified ? .appSuccess : .appTextTertiary)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.appTextPrimary)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(.appTextTertiary)
+                }
+            }
+
+            Spacer()
+
+            if let ctaLabel, let action {
+                Button(action: action) {
+                    if ctaLabel == "+" {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.appPrimary)
+                    } else {
+                        Text(ctaLabel)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(Color.appPrimary)
+                            .cornerRadius(99)
+                    }
+                }
+            } else if isVerified {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.appSuccess)
+                    .font(.system(size: 18))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 

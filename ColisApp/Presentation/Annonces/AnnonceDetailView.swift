@@ -11,16 +11,12 @@ struct AnnonceDetailView: View {
     @StateObject private var vmHolder = VMHolder<AnnonceDetailViewModel>()
     private var vm: AnnonceDetailViewModel? { vmHolder.vm }
 
-    @State private var showOffreSheet          = false
-    @State private var showLogin               = false
-    @State private var showLoginFavori         = false
-    @State private var showCertificationAlert  = false
-    @State private var showTrajetAlert         = false
-    @State private var showCertificationSheet  = false
-    @State private var showCreateTrajetSheet   = false
-    @State private var showChat                = false
-    @State private var showFermerAlert         = false
-    @State private var showPourvueSheet        = false
+    @State private var showOffreSheet  = false
+    @State private var showLogin       = false
+    @State private var showLoginFavori = false
+    @State private var showChat        = false
+    @State private var showFermerAlert = false
+    @State private var showPourvueSheet = false
 
     var body: some View {
         ScrollView {
@@ -204,13 +200,7 @@ struct AnnonceDetailView: View {
         }
         .sheet(isPresented: $showLogin) {
             AuthNavigationView(onAuthenticated: {
-                if authState.certificationStatus != "verifie" {
-                    showCertificationAlert = true
-                } else if vm?.userHasTrajets != true {
-                    showTrajetAlert = true
-                } else {
-                    showOffreSheet = true
-                }
+                showOffreSheet = true
             })
         }
         .sheet(isPresented: $showLoginFavori) {
@@ -222,36 +212,17 @@ struct AnnonceDetailView: View {
                 }
             })
         }
-        .sheet(isPresented: $showCertificationSheet) {
-            CertificationFlowView(
-                accountNom:    authState.userNom    ?? "",
-                accountPrenom: authState.userPrenom ?? "",
-                source:        "annonce_detail"
-            )
-        }
-        .sheet(isPresented: $showCreateTrajetSheet) {
-            CreateTrajetView(vm: factory.makeTrajetViewModel())
-        }
         .navigationDestination(isPresented: $showChat) {
             if let annonce = vm?.annonce {
+                let currentUserId = authState.userId ?? ""
                 ChatView(
-                    conversationId: [authState.userId ?? "", annonce.demandeurId]
-                        .sorted().joined(separator: "_"),
-                    autreUserId: annonce.demandeurId
+                    conversationId: ([currentUserId, annonce.demandeurId].sorted() + [annonce.id])
+                        .joined(separator: "_"),
+                    autreUserId:   annonce.demandeurId,
+                    annonceId:     annonce.id,
+                    isTransporter: currentUserId != annonce.demandeurId
                 )
             }
-        }
-        .alert("Certification requise", isPresented: $showCertificationAlert) {
-            Button("Me certifier") { showCertificationSheet = true }
-            Button("Annuler", role: .cancel) {}
-        } message: {
-            Text("Vous devez être certifié pour faire une offre ou contacter un annonceur.")
-        }
-        .alert("Trajet requis", isPresented: $showTrajetAlert) {
-            Button("Créer un trajet") { showCreateTrajetSheet = true }
-            Button("Annuler", role: .cancel) {}
-        } message: {
-            Text("Vous devez avoir un trajet actif pour faire une offre ou contacter un annonceur.")
         }
         .alert("Fermer l'annonce", isPresented: $showFermerAlert) {
             Button("Fermer", role: .destructive) {
@@ -449,10 +420,8 @@ struct AnnonceDetailView: View {
     // ── Boutons d'action ────────────────────────────────────
     @ViewBuilder
     private func actionButtons(_ annonce: Annonce) -> some View {
-        let isOwner     = annonce.demandeurId == authState.userId
-        let isOuverte   = annonce.statut == "ouverte"
-        let isCertified = authState.certificationStatus == "verifie"
-        let hasTrajets  = vm?.userHasTrajets == true
+        let isOwner   = annonce.demandeurId == authState.userId
+        let isOuverte = annonce.statut == "ouverte"
 
         if isOwner {
             if isOuverte {
@@ -478,23 +447,11 @@ struct AnnonceDetailView: View {
         } else if isOuverte {
             if authState.isLoggedIn {
                 AppButton(title: "Faire une offre") {
-                    if !isCertified {
-                        showCertificationAlert = true
-                    } else if !hasTrajets {
-                        showTrajetAlert = true
-                    } else {
-                        showOffreSheet = true
-                    }
+                    showOffreSheet = true
                 }
 
                 Button {
-                    if !isCertified {
-                        showCertificationAlert = true
-                    } else if !hasTrajets {
-                        showTrajetAlert = true
-                    } else {
-                        showChat = true
-                    }
+                    showChat = true
                 } label: {
                     HStack {
                         Spacer()

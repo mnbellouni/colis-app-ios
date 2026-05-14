@@ -417,9 +417,9 @@ struct CreateAnnonceView: View {
 
     // ── Écran 4 : Options de publication ─────────────────
     private var stepOptions: some View {
-        let codeSuivi = vm?.avecCodeSuivi ?? false
-        let boost     = vm?.avecBoost     ?? false
-        let total     = (codeSuivi ? 0.99 : 0) + (boost ? 0.99 : 0)
+        let codeSecret = vm?.avecCodeSecret ?? true
+        let boost      = vm?.avecBoost      ?? false
+        let total      = (codeSecret ? 0.99 : 0) + (boost ? 0.99 : 0)
 
         return VStack(alignment: .leading, spacing: 16) {
             Text("Options de publication")
@@ -427,13 +427,18 @@ struct CreateAnnonceView: View {
             Text("Ces options ne peuvent pas être activées après la publication.")
                 .font(.system(size: 13)).foregroundColor(.appTextSecondary)
 
-            // ── Code de suivi ─────────────────────────────
+            // ── Code secret ───────────────────────────────
             optionToggle(
-                icon:      "qrcode",
-                titre:     "Code de suivi",
-                detail:    "Code unique lié à votre colis. Suivi à chaque étape.",
-                prix:      "0,99 €",
-                isOn:      Binding(get: { vm?.avecCodeSuivi ?? false }, set: { vm?.avecCodeSuivi = $0 })
+                icon:    "lock.shield.fill",
+                titre:   "Protéger ma livraison",
+                detail:  "Votre destinataire reçoit un code personnel pour confirmer la réception.",
+                prix:    "0,99 €",
+                isOn:    Binding(get: { vm?.avecCodeSecret ?? true }, set: { vm?.avecCodeSecret = $0 }),
+                bullets: [
+                    "Code envoyé au destinataire au moment de la prise en charge.",
+                    "Le transporteur doit l'obtenir pour confirmer la livraison.",
+                    "Couvert en cas de litige via ColisCo."
+                ]
             )
 
             // ── Boost ─────────────────────────────────────

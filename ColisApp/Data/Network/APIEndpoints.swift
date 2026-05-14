@@ -31,6 +31,9 @@ enum APIEndpoints {
     static func transactionStatut(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/statut" }
     static func transactionConfirmer(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/confirmer" }
     static func transactionLitige(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/litige" }
+    static func transactionGenererCodeLivraison(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/code-livraison/generer" }
+    static func transactionValiderCodeLivraison(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/code-livraison/valider" }
+    static func transactionValiderCodeSecret(id: String) -> String    { "\(AppConfig.baseURL)/transactions/\(id)/code-secret/valider" }
 
     // ── Livraisons ────────────────────────────────────────
     static func livraison(id: String) -> String { "\(AppConfig.baseURL)/livraisons/\(id)" }

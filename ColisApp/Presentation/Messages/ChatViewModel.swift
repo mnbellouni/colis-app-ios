@@ -18,11 +18,20 @@ final class ChatViewModel: ObservableObject {
     private var conversationId = ""
     private var autreUserId    = ""
     var currentUserId          = ""
+    var annonceId:   String?   = nil
+    var isTransporter: Bool    = false
 
-    func load(conversationId: String, autreUserId: String, currentUserId: String) async {
+    var shouldShowCodeCTA: Bool {
+        annonceId != nil && isTransporter && messages.count >= 3
+    }
+
+    func load(conversationId: String, autreUserId: String, currentUserId: String,
+              annonceId: String? = nil, isTransporter: Bool = false) async {
         self.conversationId = conversationId
         self.autreUserId    = autreUserId
         self.currentUserId  = currentUserId
+        self.annonceId      = annonceId
+        self.isTransporter  = isTransporter
         isLoading = true
         do {
             messages = try await repository.getConversation(conversationId: conversationId)

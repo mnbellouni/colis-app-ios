@@ -11,7 +11,14 @@ struct HomeView: View {
     @State private var showCreate           = false
     @State private var showLogin            = false
     @State private var showLoginFavori      = false
+    @State private var showSearch           = false
     @State private var pendingFavoriId: String? = nil
+
+    @Binding var selectedTab: Int
+
+    init(selectedTab: Binding<Int> = .constant(0)) {
+        self._selectedTab = selectedTab
+    }
 
     let types = [
         ("Tout",      nil as String?),
@@ -21,7 +28,8 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            ZStack {
+                VStack(spacing: 0) {
 
                 // ── Header ────────────────────────────────
                 VStack(spacing: 16) {
@@ -36,53 +44,68 @@ struct HomeView: View {
                         }
                         Spacer()
 
-                        HStack(spacing: 8) {
-                            // Bouton filtre – quad glass
+                        // Avatar profil (si connecté)
+                        if authState.isLoggedIn {
                             Button {
-                                vm?.showFiltres = true
+                                selectedTab = 3
                             } label: {
-                                let hasFilters = vm?.filtresActifs.isEmpty == false
-                                Image(systemName: "line.3.horizontal.decrease")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(hasFilters ? .appPrimary : .appTextSecondary)
-                                    .frame(width: 36, height: 36)
-                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                    )
-                                    .overlay(alignment: .topTrailing) {
-                                        if hasFilters {
-                                            Circle()
-                                                .fill(Color.appPrimary)
-                                                .frame(width: 8, height: 8)
-                                                .offset(x: 4, y: -4)
-                                        }
-                                    }
-                            }
-
-                            // Bouton + – quad glass + gradient
-                            Button {
-                                if authState.isLoggedIn { showCreate = true }
-                                else { showLogin = true }
-                            } label: {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 40, height: 40)
-                                    .background {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 13).fill(.ultraThinMaterial)
-                                            RoundedRectangle(cornerRadius: 13).fill(Color.appPrimary)
-                                        }
-                                    }
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 13)
-                                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                    )
+                                AvatarView(
+                                    seed: authState.userPrenom ?? "Utilisateur",
+                                    size: 42,
+                                    showOnline: false
+                                )
                             }
                         }
                     }
+
+                    // ── Barre de recherche ────────────────
+                    HStack(spacing: 10) {
+                        Button {
+                            showSearch = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.system(size: 17))
+                                    .foregroundColor(.appTextTertiary)
+
+                                Text("Ville, pays, mot-clé…")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.appTextTertiary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            vm?.showFiltres = true
+                        } label: {
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "line.3.horizontal.decrease")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.appPrimary)
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.appPrimaryLight)
+                                    .cornerRadius(10)
+
+                                if vm?.filtresActifs.isEmpty == false {
+                                    Circle()
+                                        .fill(Color.appAccent)
+                                        .frame(width: 7, height: 7)
+                                        .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                                        .offset(x: 3, y: 3)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.appCard)
+                    .cornerRadius(14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.appBorder, lineWidth: 1.5)
+                    )
+                    .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 2)
 
                     // ── Filtres rapides type ──────────────
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -191,6 +214,36 @@ struct HomeView: View {
             }
             .background(Color.appBackground)
             .navigationBarHidden(true)
+
+            // ── FAB Créer annonce ─────────────────────────
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button {
+                        if authState.isLoggedIn { showCreate = true }
+                        else { showLogin = true }
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 42, height: 42)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.appPrimary, Color.appPrimaryDark],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(14)
+                            .shadow(color: Color.appPrimary.opacity(0.45), radius: 18, x: 0, y: 6)
+                    }
+                    .buttonStyle(FabButtonStyle())
+                    .padding(.trailing, 18)
+                    .padding(.bottom, 16)
+                }
+            }
+        }
             .sheet(isPresented: $showCreate) { CreateAnnonceView() }
             .sheet(isPresented: $showLogin)  { AuthNavigationView(onAuthenticated: { showCreate = true }) }
             .sheet(isPresented: $showLoginFavori) {
@@ -208,6 +261,9 @@ struct HomeView: View {
                 set: { vm?.showFiltres = $0 }
             )) {
                 if let vm { HomeFiltresView(vm: vm) }
+            }
+            .navigationDestination(isPresented: $showSearch) {
+                SearchView()
             }
         }
         .task {
@@ -467,6 +523,15 @@ private struct SingleSelectSection: View {
     }
 }
 
+// ── FAB Button Style ──────────────────────────────────────
+struct FabButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
 // ── Multi-select section ──────────────────────────────────
 
 private struct MultiSelectSection: View {
@@ -514,4 +579,5 @@ private struct MultiSelectSection: View {
         }
     }
 }
+
 
