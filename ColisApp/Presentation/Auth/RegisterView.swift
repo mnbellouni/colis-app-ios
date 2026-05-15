@@ -14,16 +14,27 @@ struct RegisterView: View {
     @State private var confirmPassword = ""
     @State private var nom             = ""
     @State private var prenom          = ""
-    @State private var telephone       = ""
+    @State private var localPhoneNumber  = ""
+    @State private var selectedCountry: Country = defaultCountry()
 
     // Validation
     @State private var emailError:    String? = nil
     @State private var passwordError: String? = nil
     @State private var confirmError:  String? = nil
+    @State private var phoneError:    String? = nil
 
     @State private var emailTouched    = false
     @State private var passwordTouched = false
     @State private var confirmTouched  = false
+    @State private var phoneTouched    = false
+
+    private var e164Phone: String {
+        let digits = localPhoneNumber.filter(\.isNumber)
+        guard !digits.isEmpty else { return "" }
+        let stripped = selectedCountry.leadingZero && digits.hasPrefix("0")
+            ? String(digits.dropFirst()) : digits
+        return selectedCountry.dialCode + stripped
+    }
 
     var body: some View {
         ScrollView {
@@ -61,12 +72,13 @@ struct RegisterView: View {
                         }
                     }
 
-                    AppTextField(
-                        title:        "Téléphone",
-                        placeholder:  "Ex : +33 6 00 00 00 00",
-                        text:         $telephone,
-                        keyboardType: .phonePad
+                    CountryPhoneField(
+                        localNumber:     $localPhoneNumber,
+                        selectedCountry: $selectedCountry,
+                        errorMessage:    phoneError,
+                        onBlur:          { phoneTouched = true; validatePhone() }
                     )
+                    .onChange(of: localPhoneNumber) { phoneTouched = true }
 
                     // Mot de passe
                     VStack(alignment: .leading, spacing: 4) {
@@ -112,14 +124,15 @@ struct RegisterView: View {
                         validateEmail()
                         validatePassword()
                         validateConfirm()
-                        guard emailError == nil, passwordError == nil, confirmError == nil else { return }
+                        validatePhone()
+                        guard emailError == nil, passwordError == nil, confirmError == nil, phoneError == nil else { return }
                         Task {
                             await vm?.register(
                                 email:     email,
                                 password:  password,
                                 nom:       nom,
                                 prenom:    prenom,
-                                telephone: telephone,
+                                telephone: e164Phone,
                                 authState: authState
                             )
                         }
@@ -163,6 +176,17 @@ struct RegisterView: View {
         guard let dotIndex = domain.lastIndex(of: ".") else { return false }
         let tld = domain[domain.index(after: dotIndex)...]
         return tld.count >= 2
+    }
+
+    private func validatePhone() {
+        guard !localPhoneNumber.trimmingCharacters(in: .whitespaces).isEmpty else {
+            phoneError = nil
+            return
+        }
+        let e164 = e164Phone
+        let regex = #"^\+[1-9]\d{6,14}$"#
+        phoneError = e164.range(of: regex, options: .regularExpression) != nil
+            ? nil : "Numéro invalide pour ce pays"
     }
 
     private func validatePassword() {

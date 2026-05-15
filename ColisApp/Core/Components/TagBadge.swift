@@ -9,8 +9,18 @@ struct TagBadge: View {
         case `default`, urgent, success
     }
 
+    init(_ tag: String, style: Style = .default) {
+        self.tag   = tag
+        self.style = style
+    }
+
+    init(_ item: TagItem, style: Style = .default) {
+        self.tag   = item.label
+        self.style = style
+    }
+
     var body: some View {
-        Text(tag.replacingOccurrences(of: "_", with: " "))
+        Text(tag)
             .font(.system(size: 11, weight: .semibold))
             .foregroundColor(foreground)
             .padding(.horizontal, 10)

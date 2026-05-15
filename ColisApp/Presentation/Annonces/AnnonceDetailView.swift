@@ -148,7 +148,7 @@ struct AnnonceDetailView: View {
                                     .foregroundColor(.appTextSecondary)
                                 FlowLayout(spacing: 6) {
                                     ForEach(annonce.tags, id: \.self) { tag in
-                                        TagBadge(tag: tag)
+                                        TagBadge(tag)
                                     }
                                 }
                             }

@@ -42,7 +42,7 @@ struct TrajetDetailView: View {
                                 .foregroundColor(.appTextSecondary)
                             FlowLayout(spacing: 6) {
                                 ForEach(trajet.categoriesAcceptees, id: \.self) { cat in
-                                    TagBadge(tag: cat)
+                                    TagBadge(cat)
                                 }
                             }
                         }

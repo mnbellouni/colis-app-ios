@@ -6,12 +6,10 @@ final class HomeViewModel: ObservableObject {
 
     private let repository: any AnnonceRepository
     private let favorisRepository: any FavorisRepository
-    private let paysRepository: any PaysRepository
 
-    init(repository: any AnnonceRepository, favorisRepository: any FavorisRepository, paysRepository: any PaysRepository) {
+    init(repository: any AnnonceRepository, favorisRepository: any FavorisRepository) {
         self.repository        = repository
         self.favorisRepository = favorisRepository
-        self.paysRepository    = paysRepository
     }
 
     @Published var pays:           [Pays]    = []
@@ -23,18 +21,13 @@ final class HomeViewModel: ObservableObject {
 
     // Filtres avancés
     @Published var showFiltres           = false
-    @Published var filtresCategories     = Set<String>()
+    @Published var filtreTags            = Set<String>()
     @Published var filtrePaysDepart      = Set<String>()
-    @Published var filtrePaysArrivee   = Set<String>()
-    @Published var filtreVilleDepart   = ""
-    @Published var filtreVilleArrivee  = ""
-    @Published var filtreUrgence       = false
-    @Published var filtreFavoris       = false
-
-    static let categoriesDisponibles = [
-        "vetements", "electronique", "medicament",
-        "documents", "alimentaire", "cosmetique", "cadeau", "autre"
-    ]
+    @Published var filtrePaysArrivee     = Set<String>()
+    @Published var filtreVilleDepart     = ""
+    @Published var filtreVilleArrivee    = ""
+    @Published var filtreUrgence         = false
+    @Published var filtreFavoris         = false
 
     private var nextToken: String?   = nil
     @Published var idsFavoris: Set<String> = []
@@ -43,9 +36,9 @@ final class HomeViewModel: ObservableObject {
 
     var filtresActifs: [(label: String, clear: () -> Void)] {
         var result: [(String, () -> Void)] = []
-        for cat in filtresCategories.sorted() {
-            let captured = cat
-            result.append(("Cat: \(cat.capitalized)", { self.filtresCategories.remove(captured) }))
+        for tag in filtreTags.sorted() {
+            let captured = tag
+            result.append(("Tag: \(tag)", { self.filtreTags.remove(captured) }))
         }
         if !filtrePaysDepart.isEmpty   {
             let label = filtrePaysDepart.count == 1
@@ -98,8 +91,8 @@ final class HomeViewModel: ObservableObject {
         isLoadingMore = false
     }
 
-    func loadPays() async {
-        pays = (try? await paysRepository.getPays()) ?? Pays.defauts
+    func loadPays(from config: RemoteConfig) {
+        pays = config.pays.isEmpty ? Pays.defauts : config.pays
     }
 
     func loadFavorisIds(isLoggedIn: Bool) async {
@@ -124,7 +117,7 @@ final class HomeViewModel: ObservableObject {
     }
 
     func clearAllFilters() {
-        filtresCategories  = []
+        filtreTags         = []
         filtrePaysDepart   = []
         filtrePaysArrivee  = []
         filtreVilleDepart  = ""
@@ -136,26 +129,20 @@ final class HomeViewModel: ObservableObject {
     private func buildParams(type: String?) -> [String: String] {
         var p: [String: String] = ["limit": "20"]
         if let t = type                     { p["type"]        = t }
-        // API single-value: envoyer une catégorie quand une seule sélectionnée
-        if filtresCategories.count == 1, let cat = filtresCategories.first {
-                                            p["categorie"]   = cat }
         if !filtrePaysDepart.isEmpty        { p["paysDepart"]  = filtrePaysDepart.sorted().joined(separator: ",") }
         if !filtreVilleDepart.isEmpty       { p["villeDepart"] = filtreVilleDepart }
         if !filtrePaysArrivee.isEmpty       { p["paysArrivee"] = filtrePaysArrivee.sorted().joined(separator: ",") }
         if !filtreVilleArrivee.isEmpty      { p["villeArrivee"] = filtreVilleArrivee }
-        if filtreUrgence                    { p["tag"]         = "urgent" }
+        // Tags : fusion des tags sélectionnés manuellement + tag "urgent" si toggle activé
+        var tagsActifs = filtreTags
+        if filtreUrgence { tagsActifs.insert("urgent") }
+        if !tagsActifs.isEmpty              { p["tag"] = tagsActifs.sorted().joined(separator: ",") }
         return p
     }
 
-    // Filtrage client-side pour multi-catégories et favoris
+    // Filtrage client-side pour favoris
     private func applyClientFilters(_ items: [Annonce]) -> [Annonce] {
-        var result = items
-        if filtresCategories.count > 1 {
-            result = result.filter { !Set($0.categories).isDisjoint(with: filtresCategories) }
-        }
-        if filtreFavoris {
-            result = result.filter { idsFavoris.contains($0.id) }
-        }
-        return result
+        guard filtreFavoris else { return items }
+        return items.filter { idsFavoris.contains($0.id) }
     }
 }

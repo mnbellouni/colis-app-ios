@@ -4,6 +4,7 @@ struct HomeView: View {
 
     @Environment(\.factory)        private var factory
     @EnvironmentObject private var authState: AuthState
+    @EnvironmentObject private var configService: AppConfigService
 
     @StateObject private var vmHolder = VMHolder<HomeViewModel>()
     private var vm: HomeViewModel? { vmHolder.vm }
@@ -268,7 +269,7 @@ struct HomeView: View {
         }
         .task {
             vmHolder.vm = factory.makeHomeViewModel()
-            await vm?.loadPays()
+            vm?.loadPays(from: configService.config)
             await vm?.loadFavorisIds(isLoggedIn: authState.isLoggedIn)
             await vm?.loadAnnonces()
         }
@@ -279,6 +280,7 @@ struct HomeView: View {
 
 struct HomeFiltresView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var configService: AppConfigService
     @ObservedObject var vm: HomeViewModel
 
     @State private var openSection: String? = nil
@@ -289,15 +291,10 @@ struct HomeFiltresView: View {
                 VStack(spacing: 10) {
 
                     accordionCard(
-                        "Catégorie", icon: "tag.fill",
-                        selectedLabels: vm.filtresCategories.sorted().map { $0.capitalized }
+                        "Tags", icon: "sparkles",
+                        selectedLabels: tagsLabels
                     ) {
-                        MultiSelectSection(
-                            title: "",
-                            items: HomeViewModel.categoriesDisponibles,
-                            selected: $vm.filtresCategories,
-                            labelFor: { $0.capitalized }
-                        )
+                        tagsSection
                     }
 
                     accordionCard(
@@ -309,7 +306,7 @@ struct HomeFiltresView: View {
                                 title: "Pays de départ",
                                 items: vm.pays.map { $0.code },
                                 selected: $vm.filtrePaysDepart,
-                                labelFor: { code in vm.pays.first { $0.code == code }?.nom ?? code }
+                                labelFor: { code in vm.pays.first { $0.code == code }?.affichage ?? code }
                             )
                             AppTextField(title: "Ville", placeholder: "Paris",
                                          text: $vm.filtreVilleDepart)
@@ -325,7 +322,7 @@ struct HomeFiltresView: View {
                                 title: "Pays d'arrivée",
                                 items: vm.pays.map { $0.code },
                                 selected: $vm.filtrePaysArrivee,
-                                labelFor: { code in vm.pays.first { $0.code == code }?.nom ?? code }
+                                labelFor: { code in vm.pays.first { $0.code == code }?.affichage ?? code }
                             )
                             AppTextField(title: "Ville", placeholder: "Casablanca",
                                          text: $vm.filtreVilleArrivee)
@@ -380,17 +377,55 @@ struct HomeFiltresView: View {
         }
     }
 
+    // ── Section tags groupés ──────────────────────────────────
+    @ViewBuilder
+    private var tagsSection: some View {
+        let config = configService.config.tags
+        VStack(alignment: .leading, spacing: 14) {
+            tagGroupe("Urgence", items: config.urgence)
+            tagGroupe("Contenu", items: config.contenu)
+            tagGroupe("Dimensions", items: config.dimensions)
+        }
+    }
+
+    @ViewBuilder
+    private func tagGroupe(_ titre: String, items: [TagItem]) -> some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(titre)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.appTextSecondary)
+                    .textCase(.uppercase)
+                FlowLayout(spacing: 6) {
+                    ForEach(items) { item in
+                        let selected = vm.filtreTags.contains(item.id)
+                        FilterChip(label: item.label, isSelected: selected) {
+                            if selected { vm.filtreTags.remove(item.id) }
+                            else        { vm.filtreTags.insert(item.id) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // ── Labels résumé ─────────────────────────────────────────
+    private var tagsLabels: [String] {
+        let allTags = configService.config.tags.tous
+        return vm.filtreTags.sorted()
+            .compactMap { id in allTags.first { $0.id == id }?.label }
+    }
+
     private var departLabels: [String] {
         var items = vm.filtrePaysDepart.sorted()
-            .compactMap { code in vm.pays.first { $0.code == code }?.nom }
+            .compactMap { code in vm.pays.first { $0.code == code }.map { "\($0.emoji) \($0.nom)" } }
         if !vm.filtreVilleDepart.isEmpty { items.append(vm.filtreVilleDepart) }
         return items
     }
 
     private var arriveeLabels: [String] {
         var items = vm.filtrePaysArrivee.sorted()
-            .compactMap { code in vm.pays.first { $0.code == code }?.nom }
+            .compactMap { code in vm.pays.first { $0.code == code }.map { "\($0.emoji) \($0.nom)" } }
         if !vm.filtreVilleArrivee.isEmpty { items.append(vm.filtreVilleArrivee) }
         return items
     }

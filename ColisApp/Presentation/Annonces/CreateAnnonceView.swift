@@ -5,6 +5,7 @@ struct CreateAnnonceView: View {
 
     @Environment(\.factory)        private var factory
     @EnvironmentObject private var authState: AuthState
+    @EnvironmentObject private var configService: AppConfigService
     @Environment(\.dismiss)        private var dismiss
 
     @StateObject private var vmHolder = VMHolder<CreateAnnonceViewModel>()
@@ -21,11 +22,8 @@ struct CreateAnnonceView: View {
 
     let categories = ["vetements", "electronique", "medicament",
                       "documents", "alimentaire", "cosmetique", "cadeau", "autre"]
-    let allTags = [
-        "urgent", "tres_urgent", "medicament",
-        "hospitalisation", "humanitaire", "lourd",
-        "encombrant", "perissable", "valeur_elevee"
-    ]
+
+    private var tagsConfig: RemoteConfig.TagsConfig { configService.config.tags }
 
     var body: some View {
         NavigationStack {
@@ -41,7 +39,8 @@ struct CreateAnnonceView: View {
         }
         .task {
             vmHolder.vm = factory.makeCreateAnnonceViewModel()
-            paysList = (try? await factory.makePaysRepository().getPays()) ?? Pays.defauts
+            let cfg = configService.config
+            paysList = cfg.pays.isEmpty ? Pays.defauts : cfg.pays
         }
     }
 
@@ -51,9 +50,12 @@ struct CreateAnnonceView: View {
             VStack(spacing: 28) {
 
                 ZStack {
-                    Circle().fill(Color.appPrimaryLight).frame(width: 120, height: 120)
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(Color.appPrimaryLight)
+                        .frame(width: 120, height: 120)
+                        .shadow(color: Color.appPrimary.opacity(0.20), radius: 16, x: 0, y: 6)
                     Image(systemName: "shippingbox.fill")
-                        .font(.system(size: 52)).foregroundColor(.appPrimary)
+                        .font(.system(size: 48)).foregroundColor(.appPrimary)
                 }
                 .padding(.top, 20)
 
@@ -63,12 +65,12 @@ struct CreateAnnonceView: View {
                         .foregroundColor(.appTextPrimary)
                         .multilineTextAlignment(.center)
                     Text("Trouvez un voyageur qui passe par là où vous en avez besoin")
-                        .font(.system(size: 15))
+                        .font(.system(size: 14))
                         .foregroundColor(.appTextSecondary)
                         .multilineTextAlignment(.center)
                 }
 
-                VStack(spacing: 16) {
+                VStack(spacing: 14) {
                     onboardingStep(num: 1, icon: "doc.text.fill",
                                    title: "Décrivez votre colis",
                                    detail: "Quelques infos suffisent : type, poids, destination.")
@@ -121,7 +123,9 @@ struct CreateAnnonceView: View {
     private func onboardingStep(num: Int, icon: String, title: String, detail: String) -> some View {
         HStack(spacing: 14) {
             ZStack {
-                Circle().fill(Color.appPrimaryLight).frame(width: 44, height: 44)
+                RoundedRectangle(cornerRadius: 13)
+                    .fill(Color.appPrimaryLight)
+                    .frame(width: 44, height: 44)
                 Image(systemName: icon).font(.system(size: 18)).foregroundColor(.appPrimary)
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -137,7 +141,23 @@ struct CreateAnnonceView: View {
         ScrollView {
             VStack(spacing: 20) {
 
-                ProgressBar(step: step, total: 4)
+                // Barre de progression segmentée (DS: flex 1 / 4px / radius 99)
+                StepProgressBar(step: step, total: 4)
+
+                // Label étape
+                HStack {
+                    Text(stepTitles[safe: step] ?? "")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.appTextTertiary)
+                        .textCase(.uppercase)
+                        .tracking(0.06 * 11)
+                    Spacer()
+                    Text("Étape \(step + 1)/4")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.appTextTertiary)
+                        .textCase(.uppercase)
+                        .tracking(0.06 * 11)
+                }
 
                 switch step {
                 case 0: stepType
@@ -147,12 +167,8 @@ struct CreateAnnonceView: View {
                 default: EmptyView()
                 }
 
-                if let error = vm?.error {
-                    ErrorBanner(message: error)
-                }
-                if let error = stepError {
-                    ErrorBanner(message: error)
-                }
+                if let error = vm?.error       { ErrorBanner(message: error) }
+                if let error = stepError        { ErrorBanner(message: error) }
 
                 HStack(spacing: 12) {
                     if step > 0 {
@@ -190,7 +206,7 @@ struct CreateAnnonceView: View {
                     }
                 }
             }
-            .padding(20)
+            .padding(18)
         }
         .background(Color.appBackground)
         .navigationTitle("Nouvelle annonce")
@@ -205,36 +221,49 @@ struct CreateAnnonceView: View {
         }
     }
 
-    // ── Écran 1 : Type ────────────────────────────────────
+    private let stepTitles = ["Type d'annonce", "Informations colis", "Contacts & adresses", "Options"]
+
+    // ── Étape 1 : Type ───────────────────────────────────
     private var stepType: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Type d'annonce")
-                .font(.system(size: 20, weight: .bold)).foregroundColor(.appTextPrimary)
-            Text("Choisissez ce que vous souhaitez faire")
-                .font(.system(size: 14)).foregroundColor(.appTextSecondary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Type d'annonce")
+                    .font(.system(size: 24, weight: .bold)).foregroundColor(.appTextPrimary)
+                Text("Choisissez ce que vous souhaitez faire")
+                    .font(.system(size: 14)).foregroundColor(.appTextSecondary)
+            }
 
             VStack(spacing: 12) {
-                TypeCard(icon: "shippingbox.fill", title: "Transport",
-                         subtitle: "Vous envoyez un colis existant",
-                         selected: vm?.type == "transport") { vm?.type = "transport" }
+                TypeSelectionCard(
+                    icon: "shippingbox.fill",
+                    iconColor: Color.appPrimary,
+                    title: "Transport",
+                    subtitle: "Vous envoyez un colis existant",
+                    selected: vm?.type == "transport"
+                ) { vm?.type = "transport" }
 
-                TypeCard(icon: "bag.fill", title: "Achat + Transport",
-                         subtitle: "Vous souhaitez qu'on achète et ramène un produit",
-                         selected: vm?.type == "achat_transport") { vm?.type = "achat_transport" }
+                TypeSelectionCard(
+                    icon: "bag.fill",
+                    iconColor: Color.appAccent,
+                    title: "Achat + Transport",
+                    subtitle: "Vous souhaitez qu'on achète et ramène un produit",
+                    selected: vm?.type == "achat_transport"
+                ) { vm?.type = "achat_transport" }
             }
         }
     }
 
-    // ── Écran 2 : Informations du colis ───────────────────
+    // ── Étape 2 : Informations du colis ──────────────────
     private var stepColis: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Informations du colis")
-                .font(.system(size: 20, weight: .bold)).foregroundColor(.appTextPrimary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Informations du colis")
+                    .font(.system(size: 24, weight: .bold)).foregroundColor(.appTextPrimary)
+            }
 
-            // Photos (2 max, JPG/PNG/HEIC, 10 Mo)
+            // Photos (2 max)
             VStack(alignment: .leading, spacing: 8) {
-                Text("Photos (facultatif, 2 max)")
-                    .font(.system(size: 13, weight: .medium)).foregroundColor(.appTextSecondary)
+                sectionLabel("Photos (facultatif, 2 max)")
                 HStack(spacing: 12) {
                     ForEach(0..<2, id: \.self) { slot in
                         if slot < selectedPhotos.count {
@@ -243,7 +272,7 @@ struct CreateAnnonceView: View {
                                     .resizable().scaledToFill()
                                     .frame(width: 100, height: 100)
                                     .clipped()
-                                    .cornerRadius(10)
+                                    .cornerRadius(13)
                                 Button {
                                     selectedPhotos.remove(at: slot)
                                     if pickerItems.count > slot { pickerItems.remove(at: slot) }
@@ -262,15 +291,18 @@ struct CreateAnnonceView: View {
                                 matching: .images
                             ) {
                                 ZStack {
-                                    RoundedRectangle(cornerRadius: 10)
+                                    RoundedRectangle(cornerRadius: 13)
                                         .fill(Color.appCanvas)
                                         .frame(width: 100, height: 100)
-                                        .overlay(RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color.appBorder, style: StrokeStyle(lineWidth: 1, dash: [4])))
-                                    VStack(spacing: 4) {
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 13)
+                                                .stroke(Color.appBorder, style: StrokeStyle(lineWidth: 1.5, dash: [5]))
+                                        )
+                                    VStack(spacing: 6) {
                                         Image(systemName: "camera.fill")
                                             .font(.system(size: 22)).foregroundColor(.appPrimary)
-                                        Text("Ajouter").font(.system(size: 11)).foregroundColor(.appTextTertiary)
+                                        Text("Ajouter")
+                                            .font(.system(size: 11, weight: .medium)).foregroundColor(.appTextTertiary)
                                     }
                                 }
                             }
@@ -296,32 +328,34 @@ struct CreateAnnonceView: View {
             AppTextField(title: "Titre *", placeholder: "Ex: Colis vêtements famille",
                          text: Binding(get: { vm?.titre ?? "" }, set: { vm?.titre = $0 }))
 
-            AppTextField(title: "Description", placeholder: "Décrivez votre colis...",
+            AppTextField(title: "Description", placeholder: "Décrivez votre colis…",
                          text: Binding(get: { vm?.description ?? "" }, set: { vm?.description = $0 }))
 
+            // Catégories (multi-sélection obligatoire)
             VStack(alignment: .leading, spacing: 8) {
-                Text("Catégories *").font(.system(size: 13, weight: .medium)).foregroundColor(.appTextSecondary)
+                sectionLabel("Catégories *")
                 FlowLayout(spacing: 8) {
                     ForEach(categories, id: \.self) { cat in
-                        FilterChip(label: cat.capitalized, isSelected: vm?.categories.contains(cat) ?? false) {
-                            if vm?.categories.contains(cat) == true { vm?.categories.removeAll { $0 == cat } }
-                            else { vm?.categories.append(cat) }
+                        FilterChip(
+                            label: cat.capitalized,
+                            isSelected: vm?.categories.contains(cat) ?? false
+                        ) {
+                            if vm?.categories.contains(cat) == true {
+                                vm?.categories.removeAll { $0 == cat }
+                            } else {
+                                vm?.categories.append(cat)
+                            }
                         }
                     }
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Tags").font(.system(size: 13, weight: .medium)).foregroundColor(.appTextSecondary)
-                FlowLayout(spacing: 8) {
-                    ForEach(allTags, id: \.self) { tag in
-                        FilterChip(label: tag.replacingOccurrences(of: "_", with: " ").capitalized,
-                                   isSelected: vm?.tags.contains(tag) ?? false) {
-                            if vm?.tags.contains(tag) == true { vm?.tags.removeAll { $0 == tag } }
-                            else { vm?.tags.append(tag) }
-                        }
-                    }
-                }
+            // Tags groupés (Urgence / Contenu / Dimensions)
+            VStack(alignment: .leading, spacing: 10) {
+                sectionLabel("Tags")
+                tagGroupSection("Urgence",    items: tagsConfig.urgence)
+                tagGroupSection("Contenu",    items: tagsConfig.contenu)
+                tagGroupSection("Dimensions", items: tagsConfig.dimensions)
             }
 
             HStack(spacing: 12) {
@@ -334,7 +368,7 @@ struct CreateAnnonceView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Date limite").font(.system(size: 13, weight: .medium)).foregroundColor(.appTextSecondary)
+                sectionLabel("Date limite")
                 DatePicker("", selection: Binding(
                     get: { vm?.dateLimite ?? Date() },
                     set: { vm?.dateLimite = $0 }
@@ -346,18 +380,43 @@ struct CreateAnnonceView: View {
                 Label("Colis fragile", systemImage: "exclamationmark.triangle")
                     .font(.system(size: 15)).foregroundColor(.appTextPrimary)
             }
-            .tint(.appPrimary)
+            .tint(.appWarning)
         }
     }
 
-    // ── Écran 3 : Contacts et adresses ───────────────────
+    @ViewBuilder
+    private func tagGroupSection(_ titre: String, items: [TagItem]) -> some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(titre)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.appTextTertiary)
+                    .textCase(.uppercase)
+                    .tracking(0.05 * 11)
+                FlowLayout(spacing: 8) {
+                    ForEach(items) { item in
+                        let selected = vm?.tags.contains(item.id) ?? false
+                        FilterChip(label: item.label, isSelected: selected) {
+                            if selected { vm?.tags.removeAll { $0 == item.id } }
+                            else        { vm?.tags.append(item.id) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Étape 3 : Contacts et adresses ───────────────────
     private var stepContacts: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Contacts et adresses")
-                .font(.system(size: 20, weight: .bold)).foregroundColor(.appTextPrimary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Contacts et adresses")
+                    .font(.system(size: 24, weight: .bold)).foregroundColor(.appTextPrimary)
+            }
 
+            // Bloc expéditeur
             VStack(alignment: .leading, spacing: 10) {
-                Text("Expéditeur").font(.system(size: 14, weight: .semibold)).foregroundColor(.appTextSecondary)
+                sectionLabel("Expéditeur")
                 HStack(spacing: 12) {
                     AppTextField(title: "Prénom", placeholder: "Jean",
                                  text: Binding(get: { vm?.prenomExpediteur ?? "" }, set: { vm?.prenomExpediteur = $0 }))
@@ -371,11 +430,12 @@ struct CreateAnnonceView: View {
                 AppTextField(title: "Adresse départ", placeholder: "10 rue de la Paix",
                              text: Binding(get: { vm?.adresseDepart ?? "" }, set: { vm?.adresseDepart = $0 }))
             }
-            .padding(14).background(Color.appCard).cornerRadius(13)
-            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1))
+            .padding(14).background(Color.appCard).cornerRadius(16)
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appBorder, lineWidth: 1))
 
+            // Bloc destinataire
             VStack(alignment: .leading, spacing: 10) {
-                Text("Destinataire").font(.system(size: 14, weight: .semibold)).foregroundColor(.appTextSecondary)
+                sectionLabel("Destinataire")
                 HStack(spacing: 12) {
                     AppTextField(title: "Prénom", placeholder: "Marie",
                                  text: Binding(get: { vm?.prenomDestinataire ?? "" }, set: { vm?.prenomDestinataire = $0 }))
@@ -389,8 +449,64 @@ struct CreateAnnonceView: View {
                 AppTextField(title: "Adresse arrivée", placeholder: "5 rue Hassan II",
                              text: Binding(get: { vm?.adresseArrivee ?? "" }, set: { vm?.adresseArrivee = $0 }))
             }
-            .padding(14).background(Color.appCard).cornerRadius(13)
-            .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1))
+            .padding(14).background(Color.appCard).cornerRadius(16)
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appBorder, lineWidth: 1))
+        }
+    }
+
+    // ── Étape 4 : Options de publication (OptionCard) ────
+    private var stepOptions: some View {
+        let codeSecret = vm?.avecCodeSecret ?? true
+        let boost      = vm?.avecBoost      ?? false
+        let total      = (codeSecret ? 0.99 : 0.0) + (boost ? 0.99 : 0.0)
+
+        return VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Options de publication")
+                    .font(.system(size: 24, weight: .bold)).foregroundColor(.appTextPrimary)
+                Text("Ces options ne peuvent pas être activées après la publication.")
+                    .font(.system(size: 13)).foregroundColor(.appTextSecondary)
+            }
+
+            // OptionCard — Code secret
+            OptionCard(
+                icon:      "lock.shield.fill",
+                iconColor: Color.appShieldText,
+                iconBg:    Color.appShieldBg,
+                title:     "Protéger ma livraison",
+                prix:      "0,99 €",
+                selected:  codeSecret,
+                features: [
+                    "Code envoyé au destinataire au moment de la prise en charge",
+                    "Le transporteur doit l'obtenir pour confirmer la livraison",
+                    "Couvert en cas de litige via ColisCo"
+                ],
+                warning:  "Sans code secret, la livraison ne peut pas être confirmée via ColisCo"
+            ) { vm?.avecCodeSecret.toggle() }
+
+            // OptionCard — Boost
+            OptionCard(
+                icon:      "bolt.fill",
+                iconColor: Color.appWarning,
+                iconBg:    Color.appWarningLight,
+                title:     "Booster l'annonce",
+                prix:      "0,99 €",
+                selected:  boost,
+                features: [
+                    "Votre annonce remonte en tête de la liste publique dès la publication",
+                    "Les transporteurs Premium et PRO avec un trajet compatible sont contactés automatiquement",
+                    "Matching continu sur tout nouveau trajet compatible créé après votre annonce"
+                ]
+            ) { vm?.avecBoost.toggle() }
+
+            if total > 0 {
+                HStack {
+                    Spacer()
+                    Text("Total : \(String(format: "%.2f", total).replacingOccurrences(of: ".", with: ",")) €")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.appTextSecondary)
+                }
+            }
         }
     }
 
@@ -415,105 +531,14 @@ struct CreateAnnonceView: View {
         }
     }
 
-    // ── Écran 4 : Options de publication ─────────────────
-    private var stepOptions: some View {
-        let codeSecret = vm?.avecCodeSecret ?? true
-        let boost      = vm?.avecBoost      ?? false
-        let total      = (codeSecret ? 0.99 : 0) + (boost ? 0.99 : 0)
-
-        return VStack(alignment: .leading, spacing: 16) {
-            Text("Options de publication")
-                .font(.system(size: 20, weight: .bold)).foregroundColor(.appTextPrimary)
-            Text("Ces options ne peuvent pas être activées après la publication.")
-                .font(.system(size: 13)).foregroundColor(.appTextSecondary)
-
-            // ── Code secret ───────────────────────────────
-            optionToggle(
-                icon:    "lock.shield.fill",
-                titre:   "Protéger ma livraison",
-                detail:  "Votre destinataire reçoit un code personnel pour confirmer la réception.",
-                prix:    "0,99 €",
-                isOn:    Binding(get: { vm?.avecCodeSecret ?? true }, set: { vm?.avecCodeSecret = $0 }),
-                bullets: [
-                    "Code envoyé au destinataire au moment de la prise en charge.",
-                    "Le transporteur doit l'obtenir pour confirmer la livraison.",
-                    "Couvert en cas de litige via ColisCo."
-                ]
-            )
-
-            // ── Boost ─────────────────────────────────────
-            optionToggle(
-                icon:    "bolt.fill",
-                titre:   "Booster l'annonce",
-                detail:  "Maximisez vos chances de trouver un transporteur rapidement.",
-                prix:    "0,99 €",
-                isOn:    Binding(get: { vm?.avecBoost ?? false }, set: { vm?.avecBoost = $0 }),
-                bullets: [
-                    "Votre annonce remonte en tête de la liste publique dès la publication.",
-                    "Les transporteurs Premium et PRO avec un trajet compatible sont contactés automatiquement.",
-                    "Matching continu : tout nouveau trajet compatible créé après votre annonce déclenche un contact automatique."
-                ]
-            )
-
-            // ── Total si au moins une option ──────────────
-            if total > 0 {
-                HStack {
-                    Spacer()
-                    Text("Total : \(String(format: "%.2f", total).replacingOccurrences(of: ".", with: ",")) €")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.appTextSecondary)
-                }
-            }
-        }
-    }
-
-    private func optionToggle(
-        icon:    String,
-        titre:   String,
-        detail:  String,
-        prix:    String,
-        isOn:    Binding<Bool>,
-        bullets: [String] = []
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Toggle(isOn: isOn) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Label(titre, systemImage: icon)
-                            .font(.system(size: 15, weight: .medium)).foregroundColor(.appTextPrimary)
-                        Text(prix)
-                            .font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
-                            .padding(.horizontal, 8).padding(.vertical, 3)
-                            .background(Color.appPrimary).cornerRadius(99)
-                    }
-                    Text(detail)
-                        .font(.system(size: 12)).foregroundColor(.appTextSecondary)
-                }
-            }
-            .tint(.appPrimary)
-
-            if !bullets.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(bullets, id: \.self) { bullet in
-                        HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 12)).foregroundColor(.appPrimary)
-                                .padding(.top, 1)
-                            Text(bullet)
-                                .font(.system(size: 12)).foregroundColor(.appTextSecondary)
-                        }
-                    }
-                }
-                .padding(.top, 2)
-            }
-        }
-        .padding(14)
-        .background(Color.appPrimaryLight)
-        .cornerRadius(13)
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(.appTextSecondary)
     }
 }
 
-// ── Écran 5 : Transporteurs contactés post-publication ───────
+// ── Écran 5 : Transporteurs contactés ───────────────────────
 
 struct TrajetsCompatiblesView: View {
 
@@ -523,26 +548,35 @@ struct TrajetsCompatiblesView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: 24) {
 
-                    // ── En-tête succès ────────────────────
-                    VStack(spacing: 10) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 56)).foregroundColor(.appSuccess)
+                    // Icône succès (DS: container 76×76 / radius 22 / bg appPrimaryLight / shadow)
+                    VStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 22)
+                                .fill(Color.appPrimaryLight)
+                                .frame(width: 76, height: 76)
+                                .shadow(color: Color.appPrimary.opacity(0.25), radius: 12, x: 0, y: 6)
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 40, weight: .bold))
+                                .foregroundColor(.appPrimary)
+                        }
+
                         Text("Annonce publiée !")
-                            .font(.system(size: 22, weight: .bold)).foregroundColor(.appTextPrimary)
+                            .font(.system(size: 24, weight: .bold)).foregroundColor(.appTextPrimary)
+
                         let n = vm.trajetsCompatibles.count
                         Text("\(n) transporteur\(n > 1 ? "s ont été contactés" : " a été contacté") automatiquement.")
-                            .font(.system(size: 14)).foregroundColor(.appTextSecondary)
+                            .font(.system(size: 13)).foregroundColor(.appTextSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, 10)
 
-                    // ── Liste des transporteurs contactés ─
-                    VStack(alignment: .leading, spacing: 10) {
+                    // Liste des transporteurs
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Transporteurs contactés")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.appTextSecondary)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.appTextPrimary)
                         ForEach(vm.trajetsCompatibles) { trajet in
                             TrajetContacteCard(trajet: trajet)
                         }
@@ -555,7 +589,7 @@ struct TrajetsCompatiblesView: View {
 
                     AppButton(title: "OK, voir mon annonce", action: onDismiss)
                 }
-                .padding(20)
+                .padding(18)
             }
             .background(Color.appBackground)
             .navigationTitle("Transporteurs contactés")
@@ -568,9 +602,7 @@ struct TrajetContacteCard: View {
     let trajet: Trajet
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 20)).foregroundColor(.appSuccess)
+        HStack(spacing: 11) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("\(trajet.villeDepart) → \(trajet.villeArrivee)")
                     .font(.system(size: 14, weight: .semibold)).foregroundColor(.appTextPrimary)
@@ -582,58 +614,186 @@ struct TrajetContacteCard: View {
                 }
             }
             Spacer()
+            // Badge "Contacté ✓" (DS: écran publication réussie)
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 8, weight: .bold))
+                Text("Contacté")
+                    .font(.system(size: 9, weight: .bold))
+                    .textCase(.uppercase)
+                    .tracking(0.04 * 9)
+            }
+            .foregroundColor(.appSuccess)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(Color.appSuccessLight)
+            .cornerRadius(99)
         }
-        .padding(14)
+        .padding(.horizontal, 14).padding(.vertical, 12)
         .background(Color.appCard)
-        .cornerRadius(13)
-        .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1))
+        .cornerRadius(14)
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.appBorder, lineWidth: 1))
     }
 }
 
-// ── Composants locaux ─────────────────────────────────────
+// ── Composants ────────────────────────────────────────────────
 
-struct ProgressBar: View {
+// Barre de progression segmentée (DS: flex 1, 4px, radius 99, gap 4)
+struct StepProgressBar: View {
     let step: Int
     let total: Int
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 4).fill(Color.appBorder).frame(height: 4)
-                RoundedRectangle(cornerRadius: 4).fill(Color.appPrimary)
-                    .frame(width: geo.size.width * CGFloat(step + 1) / CGFloat(total), height: 4)
+        HStack(spacing: 4) {
+            ForEach(0..<total, id: \.self) { i in
+                RoundedRectangle(cornerRadius: 99)
+                    .fill(i <= step ? Color.appPrimary : Color.appBorder)
+                    .frame(height: 4)
+                    .animation(.easeInOut(duration: 0.2), value: step)
             }
         }
-        .frame(height: 4)
     }
 }
 
-struct TypeCard: View {
-    let icon: String; let title: String; let subtitle: String; let selected: Bool; let action: () -> Void
+// Carte de sélection de type (étape 1)
+struct TypeSelectionCard: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let subtitle: String
+    let selected: Bool?
+    let action: () -> Void
+
+    var isSelected: Bool { selected ?? false }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
+                // Icône 42×42 radius 13 (DS OptionCard)
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10).fill(selected ? Color.appPrimary : Color.appCanvas).frame(width: 44, height: 44)
-                    Image(systemName: icon).font(.system(size: 18)).foregroundColor(selected ? .white : .appTextSecondary)
+                    RoundedRectangle(cornerRadius: 13)
+                        .fill(isSelected ? iconColor : Color.appCanvas)
+                        .frame(width: 42, height: 42)
+                    Image(systemName: icon)
+                        .font(.system(size: 18))
+                        .foregroundColor(isSelected ? .white : .appTextSecondary)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.system(size: 15, weight: .semibold)).foregroundColor(.appTextPrimary)
-                    Text(subtitle).font(.system(size: 12)).foregroundColor(.appTextSecondary)
+                    Text(title)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.appTextPrimary)
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(.appTextSecondary)
                 }
                 Spacer()
-                if selected { Image(systemName: "checkmark.circle.fill").foregroundColor(.appPrimary) }
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(iconColor)
+                }
             }
-            .padding(14).background(Color.appCard).cornerRadius(16)
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(selected ? Color.appPrimary : Color.appBorder, lineWidth: selected ? 2 : 1))
+            .padding(16)
+            .background(Color.appCard)
+            .cornerRadius(18)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(isSelected ? iconColor : Color.appBorder, lineWidth: isSelected ? 2 : 1)
+            )
+            .shadow(color: isSelected ? iconColor.opacity(0.13) : Color.black.opacity(0.04),
+                    radius: isSelected ? 8 : 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }
 }
 
+// OptionCard — étape 4 options de publication (DS: OptionCard specs)
+struct OptionCard: View {
+    let icon:      String
+    let iconColor: Color
+    let iconBg:    Color
+    let title:     String
+    let prix:      String
+    let selected:  Bool
+    let features:  [String]
+    var warning:   String? = nil
+    let action:    () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 12) {
+
+                // Ligne principale : icône + titre + prix
+                HStack(spacing: 14) {
+                    // Icône 42×42 radius 13
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 13)
+                            .fill(selected ? iconColor : iconBg)
+                            .frame(width: 42, height: 42)
+                        Image(systemName: icon)
+                            .font(.system(size: 18))
+                            .foregroundColor(selected ? .white : iconColor)
+                    }
+                    Text(title)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.appTextPrimary)
+                    Spacer()
+                    Text(prix)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(selected ? iconColor : .appTextSecondary)
+                }
+
+                // Features (indent sous le texte : 42 + 14 = 56)
+                if !features.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(features, id: \.self) { feat in
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(iconColor)
+                                    .padding(.top, 1)
+                                Text(feat)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.appTextSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                    .padding(.leading, 56)
+                }
+
+                // Bandeau warning (DS: appShieldBg, radius 8, margin-left 54)
+                if let warning {
+                    Text(warning)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(iconColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(iconBg)
+                        .cornerRadius(8)
+                        .padding(.leading, 56)
+                }
+            }
+            .padding(16)
+            .background(Color.appCard)
+            .cornerRadius(18)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(selected ? iconColor : Color.appBorder, lineWidth: selected ? 2 : 1)
+            )
+            .shadow(color: selected ? iconColor.opacity(0.13) : Color.black.opacity(0.04),
+                    radius: selected ? 8 : 4, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// Sélecteur de pays inline
 struct PaysPickerInline: View {
-    let label: String; let pays: [Pays]; @Binding var selection: String
+    let label:      String
+    let pays:       [Pays]
+    @Binding var selection: String
 
     @State private var showSheet = false
 
@@ -641,21 +801,23 @@ struct PaysPickerInline: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.system(size: 13, weight: .medium)).foregroundColor(.appTextSecondary)
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.appTextSecondary)
             Button { showSheet = true } label: {
                 HStack {
-                    Text(selectedPays.map { "\($0.code.flagEmoji) \($0.nom)" } ?? "Sélectionner")
-                        .font(.system(size: 15))
-                        .foregroundColor(.appTextPrimary)
+                    Text(selectedPays.map { "\($0.emoji) \($0.nom)" } ?? "Sélectionner")
+                        .font(.system(size: 14))
+                        .foregroundColor(selectedPays != nil ? .appTextPrimary : .appTextTertiary)
                     Spacer()
                     Image(systemName: "chevron.down")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.appTextSecondary)
+                        .foregroundColor(.appTextTertiary)
                 }
-                .padding(10)
-                .background(Color.appBackground)
-                .cornerRadius(10)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appBorder))
+                .padding(.horizontal, 13).padding(.vertical, 11)
+                .background(Color.appCanvas)
+                .cornerRadius(13)
+                .overlay(RoundedRectangle(cornerRadius: 13).stroke(Color.appBorder, lineWidth: 1.5))
             }
             .buttonStyle(.plain)
         }
@@ -678,7 +840,7 @@ struct PaysSheetView: View {
                     dismiss()
                 } label: {
                     HStack {
-                        Text("\(p.code.flagEmoji) \(p.nom)")
+                        Text("\(p.emoji) \(p.nom)")
                             .font(.system(size: 16))
                             .foregroundColor(.appTextPrimary)
                         Spacer()
@@ -698,14 +860,5 @@ struct PaysSheetView: View {
                 }
             }
         }
-    }
-}
-
-extension Pays {
-    static var defauts: [Pays] {
-        [Pays(code: "FR", nom: "France"), Pays(code: "DE", nom: "Allemagne"),
-         Pays(code: "IT", nom: "Italie"), Pays(code: "ES", nom: "Espagne"),
-         Pays(code: "BE", nom: "Belgique"), Pays(code: "TN", nom: "Tunisie"),
-         Pays(code: "DZ", nom: "Algérie"), Pays(code: "MA", nom: "Maroc")]
     }
 }

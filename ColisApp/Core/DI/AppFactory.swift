@@ -15,9 +15,9 @@ protocol AppFactory {
     func makeAnnonceRepository()        -> any AnnonceRepository
     func makeTrackingRepository()       -> any TrackingRepository
     func makeTrajetRepository()         -> any TrajetRepository
-    func makePaysRepository()           -> any PaysRepository
     func makeLivraisonRepository()      -> any LivraisonRepository
     func makeFavorisRepository()        -> any FavorisRepository
+    func makeAppConfigService()         -> AppConfigService
 }
 
 final class ProductionAppFactory: AppFactory {
@@ -57,10 +57,6 @@ final class ProductionAppFactory: AppFactory {
         OffreRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
     }
 
-    private func makeTransactionRepository() -> any TransactionRepository {
-        TransactionRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
-    }
-
     private func makeUserRepository() -> any UserRepository {
         UserRepositoryImpl(apiClient: apiClient)
     }
@@ -71,10 +67,6 @@ final class ProductionAppFactory: AppFactory {
     
     func makeTrajetRepository() -> any TrajetRepository {
         TrajetRepositoryImpl(apiClient: apiClient, keychainStorage: keychainStorage)
-    }
-
-    func makePaysRepository() -> any PaysRepository {
-        PaysRepositoryImpl(apiClient: apiClient)
     }
 
     func makeLivraisonRepository() -> any LivraisonRepository {
@@ -97,8 +89,12 @@ final class ProductionAppFactory: AppFactory {
         RegisterViewModel(repository: makeAuthRepository())
     }
 
+    func makeAppConfigService() -> AppConfigService {
+        AppConfigService(apiClient: apiClient)
+    }
+
     func makeHomeViewModel() -> HomeViewModel {
-        HomeViewModel(repository: makeAnnonceRepository(), favorisRepository: makeFavorisRepository(), paysRepository: makePaysRepository())
+        HomeViewModel(repository: makeAnnonceRepository(), favorisRepository: makeFavorisRepository())
     }
 
     func makeAnnonceDetailViewModel() -> AnnonceDetailViewModel {
@@ -142,10 +138,7 @@ final class ProductionAppFactory: AppFactory {
     }
 
     func makeLivraisonViewModel() -> LivraisonViewModel {
-        LivraisonViewModel(
-            livraisonRepository:   makeLivraisonRepository(),
-            transactionRepository: makeTransactionRepository()
-        )
+        LivraisonViewModel(livraisonRepository: makeLivraisonRepository())
     }
     
     func makeTrajetViewModel() -> TrajetViewModel {

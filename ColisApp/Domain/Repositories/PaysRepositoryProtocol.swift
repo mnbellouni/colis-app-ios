@@ -1,5 +1,5 @@
 import Foundation
 
 protocol PaysRepository {
-    func getPays() async throws -> [Pays]
+    func getConfig() async throws -> RemoteConfig
 }

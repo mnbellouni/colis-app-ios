@@ -26,20 +26,15 @@ enum APIEndpoints {
     static func offreAccepter(id: String) -> String { "\(AppConfig.baseURL)/offres/\(id)/accepter" }
     static func offreRefuser(id: String) -> String { "\(AppConfig.baseURL)/offres/\(id)/refuser" }
 
-    // ── Transactions ──────────────────────────────────────
-    static func transaction(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)" }
-    static func transactionStatut(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/statut" }
-    static func transactionConfirmer(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/confirmer" }
-    static func transactionLitige(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/litige" }
-    static func transactionGenererCodeLivraison(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/code-livraison/generer" }
-    static func transactionValiderCodeLivraison(id: String) -> String { "\(AppConfig.baseURL)/transactions/\(id)/code-livraison/valider" }
-    static func transactionValiderCodeSecret(id: String) -> String    { "\(AppConfig.baseURL)/transactions/\(id)/code-secret/valider" }
-
     // ── Livraisons ────────────────────────────────────────
     static func livraison(id: String) -> String { "\(AppConfig.baseURL)/livraisons/\(id)" }
     static func livraisonStatut(id: String) -> String { "\(AppConfig.baseURL)/livraisons/\(id)/statut" }
     static func mesLivraisons(role: String) -> String { "\(AppConfig.baseURL)/livraisons/me?role=\(role)" }
     static func livraisonsForTrajet(trajetId: String) -> String { "\(AppConfig.baseURL)/trajets/\(trajetId)/livraisons" }
+    static func livraisonGenererCodeLivraison(id: String) -> String { "\(AppConfig.baseURL)/livraisons/\(id)/code-livraison/generer" }
+    static func livraisonValiderCodeLivraison(id: String) -> String { "\(AppConfig.baseURL)/livraisons/\(id)/code-livraison/valider" }
+    static func livraisonValiderCodeSecret(id: String) -> String    { "\(AppConfig.baseURL)/livraisons/\(id)/code-secret/valider" }
+    static func livraisonLitige(id: String) -> String              { "\(AppConfig.baseURL)/livraisons/\(id)/litige" }
 
     // ── Messages ──────────────────────────────────────────
     static var messages:  String { "\(AppConfig.baseURL)/messages" }
@@ -54,9 +49,7 @@ enum APIEndpoints {
     static func boost(id: String) -> String { "\(AppConfig.baseURL)/boosts/\(id)" }
 
     // ── Misc ──────────────────────────────────────────────
-    static var tags:        String { "\(AppConfig.baseURL)/tags" }
-    static var zones:       String { "\(AppConfig.baseURL)/zones" }
-    static var pays:        String { "\(AppConfig.baseURL)/pays" }
+    static var config:      String { "\(AppConfig.baseURL)/config" }
     static var notifications: String { "\(AppConfig.baseURL)/notifications/token" }
     
     // ── Tracking ──────────────────────────────────────────────

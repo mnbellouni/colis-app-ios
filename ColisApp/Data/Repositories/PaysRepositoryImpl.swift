@@ -8,7 +8,7 @@ final class PaysRepositoryImpl: PaysRepository {
         self.apiClient = apiClient
     }
 
-    func getPays() async throws -> [Pays] {
-        return try await apiClient.get(url: APIEndpoints.pays, requiresAuth: false)
+    func getConfig() async throws -> RemoteConfig {
+        return try await apiClient.get(url: APIEndpoints.config, requiresAuth: false)
     }
 }

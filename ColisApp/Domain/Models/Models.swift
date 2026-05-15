@@ -85,10 +85,54 @@ struct AuthResponse: Codable {
 }
 
 // ── Pays ──────────────────────────────────────────────────
-struct Pays: Codable, Identifiable {
+struct Pays: Codable, Identifiable, Hashable {
     let code: String
     let nom: String
+    let indicatif: String
+    let emoji: String
+    let zone: String
+    let nomZone: String
     var id: String { code }
+
+    var affichage: String { "\(emoji) \(nom)" }
+    var indicatifFormate: String { "\(emoji) \(indicatif)" }
+
+    static let defauts: [Pays] = [
+        Pays(code: "FR", nom: "France",    indicatif: "+33",  emoji: "🇫🇷", zone: "EU", nomZone: "Europe"),
+        Pays(code: "DZ", nom: "Algérie",   indicatif: "+213", emoji: "🇩🇿", zone: "NA", nomZone: "Afrique du Nord"),
+        Pays(code: "MA", nom: "Maroc",     indicatif: "+212", emoji: "🇲🇦", zone: "NA", nomZone: "Afrique du Nord"),
+        Pays(code: "TN", nom: "Tunisie",   indicatif: "+216", emoji: "🇹🇳", zone: "NA", nomZone: "Afrique du Nord"),
+        Pays(code: "BE", nom: "Belgique",  indicatif: "+32",  emoji: "🇧🇪", zone: "EU", nomZone: "Europe"),
+        Pays(code: "DE", nom: "Allemagne", indicatif: "+49",  emoji: "🇩🇪", zone: "EU", nomZone: "Europe"),
+    ]
+}
+
+// ── Config (chargée au lancement, mise en cache) ───────────
+struct TagItem: Codable, Identifiable, Hashable {
+    let id: String
+    let label: String
+}
+
+struct RemoteConfig: Codable {
+    let tags: TagsConfig
+    let pays: [Pays]
+
+    struct TagsConfig: Codable {
+        let urgence: [TagItem]
+        let contenu: [TagItem]
+        let dimensions: [TagItem]
+
+        var tous: [TagItem] { urgence + contenu + dimensions }
+
+        func label(for id: String) -> String {
+            tous.first { $0.id == id }?.label ?? id
+        }
+    }
+
+    static let vide = RemoteConfig(
+        tags: TagsConfig(urgence: [], contenu: [], dimensions: []),
+        pays: []
+    )
 }
 
 // ── Annonce ───────────────────────────────────────────────
@@ -255,24 +299,6 @@ struct Offre: Codable, Identifiable {
     let createdAt: String
 }
 
-// ── Transaction ───────────────────────────────────────────
-struct Transaction: Codable, Identifiable {
-    let id: String
-    let annonceId: String
-    let offreId: String
-    let demandeurId: String
-    let voyageurId: String
-    let typeAnnonce: String
-    let prixObjet: Double
-    let fraisService: Double
-    let prixTotal: Double
-    let devise: String
-    let statut: String
-    let codeConfirmation: String
-    let etapes: [Etape]
-    let createdAt: String
-}
-
 struct Etape: Codable {
     let statut: String
     let date: String
@@ -281,15 +307,35 @@ struct Etape: Codable {
 // ── Livraison ─────────────────────────────────────────────
 struct Livraison: Codable, Identifiable {
     let id: String
-    let transactionId: String
+    let offreId: String
     let annonceId: String
+    let trajetId: String?
     let voyageurId: String
     let expediteurId: String
-    let trajetId: String?
+    let prixConvenu: Double
+    let devise: String
+    // ColisCo Protect
+    let codeLivraison: String?
+    let codeLivraisonValide: Bool
+    let codeSecretValide: Bool
+    let litige: Bool
+    let raisonLitige: String?
     let statut: String
     let etapes: [Etape]
     let createdAt: String
     let updatedAt: String
+
+    var statutDisplay: String {
+        switch statut {
+        case "en_attente": return "En attente"
+        case "recupere":   return "Récupéré"
+        case "en_transit": return "En transit"
+        case "livre":      return "Livré"
+        case "confirme":   return "Confirmé"
+        case "litige":     return "Litige"
+        default:           return statut
+        }
+    }
 }
 
 // ── Message ───────────────────────────────────────────────
@@ -319,7 +365,6 @@ struct Boost: Codable, Identifiable {
     let id: String
     let annonceId: String
     let userId: String
-    let type: String
     let prix: Double
     let devise: String
     let dureeJours: Int
@@ -327,12 +372,6 @@ struct Boost: Codable, Identifiable {
     let dateFin: String
     let actif: Bool
     let createdAt: String
-}
-
-struct BoostType: Codable {
-    let prix: Double
-    let duree_jours: Int
-    let label: String
 }
 
 // ── Evaluation ────────────────────────────────────────────
@@ -374,18 +413,6 @@ struct ColisTracking: Codable {
     var codeFormate: String { ColisCodeGenerator.formatted(code) }
 }
 
-// ── Misc ──────────────────────────────────────────────────
-struct Tags: Codable {
-    let urgence: [String]
-    let contenu: [String]
-    let transport: [String]
-    let situation: [String]
-    let recompense: [String]
-
-    var tous: [String] {
-        urgence + contenu + transport + situation + recompense
-    }
-}
 
 // ── Trajet ────────────────────────────────────────────────
 struct EtapeTrajet: Codable, Identifiable {

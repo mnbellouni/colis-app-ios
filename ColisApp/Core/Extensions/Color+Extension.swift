@@ -22,6 +22,9 @@ extension Color {
     static let appInfoLight     = Color(hex: "EBF2FF")
     static let appAccent        = Color(hex: "FF6B35")
     static let appAccentLight   = Color(hex: "FFF0EA")
+    static let appShieldBg      = Color(hex: "FFFAEC")
+    static let appShieldText    = Color(hex: "9A6E00")
+    static let appShieldBorder  = Color(hex: "F5E0B0")
 
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
